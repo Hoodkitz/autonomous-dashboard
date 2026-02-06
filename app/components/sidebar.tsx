@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
 
 const navItems = [
   { href: "/", label: "Engine", icon: "E" },
   { href: "/symbiosis", label: "Symbiosis", icon: "S" },
   { href: "/chat", label: "Agent Chat", icon: "C" },
+  { href: "/models", label: "Models", icon: "M" },
   { href: "/revenue", label: "Revenue", icon: "R" },
   { href: "/tasks", label: "Tasks", icon: "T" },
   { href: "/skills", label: "Skills", icon: "K" },
@@ -14,8 +16,42 @@ const navItems = [
   { href: "/logs", label: "Logs", icon: "L" },
 ];
 
+interface AgentStatus {
+  name: string;
+  status: "online" | "offline" | "error";
+}
+
 export function Sidebar() {
   const pathname = usePathname();
+  const [agents, setAgents] = useState<AgentStatus[]>([
+    { name: "Claude CLI", status: "online" },
+    { name: "Gemini CLI", status: "online" },
+    { name: "OpenClaw", status: "online" },
+    { name: "OpenRouter", status: "offline" },
+  ]);
+
+  useEffect(() => {
+    // Check OpenRouter status
+    fetch("/api/openrouter/usage")
+      .then((r) => {
+        if (r.ok) {
+          setAgents((prev) =>
+            prev.map((a) => a.name === "OpenRouter" ? { ...a, status: "online" } : a)
+          );
+        }
+      })
+      .catch(() => {
+        setAgents((prev) =>
+          prev.map((a) => a.name === "OpenRouter" ? { ...a, status: "error" } : a)
+        );
+      });
+  }, []);
+
+  const statusColor: Record<string, string> = {
+    online: "bg-success",
+    offline: "bg-muted",
+    error: "bg-danger",
+  };
 
   return (
     <aside className="w-56 bg-sidebar border-r border-sidebar-border flex flex-col h-screen shrink-0">
@@ -56,18 +92,12 @@ export function Sidebar() {
       </nav>
 
       <div className="p-3 border-t border-sidebar-border space-y-2">
-        <div className="flex items-center gap-2 text-xs">
-          <span className="w-1.5 h-1.5 rounded-full bg-success" />
-          <span className="text-muted">Claude CLI</span>
-        </div>
-        <div className="flex items-center gap-2 text-xs">
-          <span className="w-1.5 h-1.5 rounded-full bg-success" />
-          <span className="text-muted">Gemini CLI</span>
-        </div>
-        <div className="flex items-center gap-2 text-xs">
-          <span className="w-1.5 h-1.5 rounded-full bg-success" />
-          <span className="text-muted">OpenClaw</span>
-        </div>
+        {agents.map((agent) => (
+          <div key={agent.name} className="flex items-center gap-2 text-xs">
+            <span className={`w-1.5 h-1.5 rounded-full ${statusColor[agent.status]}`} />
+            <span className="text-muted">{agent.name}</span>
+          </div>
+        ))}
       </div>
     </aside>
   );

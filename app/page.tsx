@@ -16,6 +16,15 @@ interface EngineState {
   failedAttempts: number;
 }
 
+interface ProactiveAction {
+  type: "api_needed" | "revenue_idea" | "improvement" | "debug_suggestion";
+  title: string;
+  description: string;
+  signup_url?: string;
+  priority: "high" | "medium" | "low";
+  action_required: boolean;
+}
+
 const coreInfo: Record<string, { label: string; desc: string }> = {
   autopilot: { label: "Autopilot", desc: "End-to-end execution" },
   agentic_dev: { label: "Agentic Dev", desc: "Architecture patterns" },
@@ -31,17 +40,35 @@ const statusColors: Record<string, string> = {
   failed: "bg-danger text-danger",
   idle: "bg-muted text-muted",
   in_progress: "bg-success text-success",
+  offline: "bg-muted text-muted",
+};
+
+const actionTypeStyles: Record<string, { color: string; bg: string; label: string }> = {
+  api_needed: { color: "text-warning", bg: "bg-warning-dim", label: "API Key" },
+  revenue_idea: { color: "text-success", bg: "bg-success-dim", label: "Revenue" },
+  improvement: { color: "text-accent", bg: "bg-accent-dim", label: "Improve" },
+  debug_suggestion: { color: "text-danger", bg: "bg-danger-dim", label: "Debug" },
+};
+
+const priorityStyles: Record<string, string> = {
+  high: "text-danger",
+  medium: "text-warning",
+  low: "text-muted",
 };
 
 function StatusDot({ status }: { status: string }) {
   const color = statusColors[status]?.split(" ")[0] || "bg-muted";
-  return <span className={`w-2 h-2 rounded-full ${color} ${status === "running" ? "pulse-glow" : ""}`} />;
+  return <span className={`w-2 h-2 rounded-full ${color} ${status === "running" || status === "in_progress" ? "pulse-glow" : ""}`} />;
 }
 
 export default function EnginePage() {
   const [state, setState] = useState<EngineState | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [proactiveActions, setProactiveActions] = useState<ProactiveAction[]>([]);
+  const [proactiveLoading, setProactiveLoading] = useState(false);
+  const [proactiveTimestamp, setProactiveTimestamp] = useState<string | null>(null);
+  const [usageInfo, setUsageInfo] = useState<{ usage: number; limit: number | null } | null>(null);
 
   const fetchState = useCallback(async () => {
     try {
@@ -54,6 +81,26 @@ export default function EnginePage() {
   useEffect(() => {
     fetchState();
     const interval = setInterval(fetchState, 3000);
+
+    // Load cached proactive actions
+    fetch("/api/engine/proactive")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.actions?.length) {
+          setProactiveActions(data.actions);
+          setProactiveTimestamp(data.timestamp);
+        }
+      })
+      .catch(() => {});
+
+    // Load OpenRouter usage
+    fetch("/api/openrouter/usage")
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data.error) setUsageInfo(data);
+      })
+      .catch(() => {});
+
     return () => clearInterval(interval);
   }, [fetchState]);
 
@@ -71,6 +118,43 @@ export default function EnginePage() {
     setActionLoading(null);
   };
 
+  const runProactiveScan = async () => {
+    setProactiveLoading(true);
+    try {
+      const res = await fetch("/api/engine/proactive", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ context: "Full system analysis requested by user" }),
+      });
+
+      const reader = res.body?.getReader();
+      if (!reader) return;
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const evt = JSON.parse(line);
+            if (evt.type === "result") {
+              setProactiveActions(evt.actions || []);
+              setProactiveTimestamp(evt.timestamp);
+            }
+          } catch { /* skip */ }
+        }
+      }
+    } catch { /* error */ }
+    setProactiveLoading(false);
+  };
+
   if (loading) return <div className="text-muted p-6">Loading...</div>;
   if (!state) return <div className="text-danger p-6">Failed to load engine state</div>;
 
@@ -85,11 +169,19 @@ export default function EnginePage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Engine Control</h1>
-          <p className="text-sm text-muted mt-0.5">v{state.engineVersion} Symbiotic</p>
+          <p className="text-sm text-muted mt-0.5">v{state.engineVersion} Symbiotic + OpenRouter</p>
         </div>
-        <div className="flex items-center gap-2">
-          <StatusDot status={state.status} />
-          <span className="text-sm font-semibold text-foreground">{state.status.toUpperCase()}</span>
+        <div className="flex items-center gap-4">
+          {usageInfo && (
+            <div className="text-right">
+              <p className="text-xs text-muted">OpenRouter</p>
+              <p className="text-sm font-semibold text-foreground">${usageInfo.usage.toFixed(4)}</p>
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <StatusDot status={state.status} />
+            <span className="text-sm font-semibold text-foreground">{state.status.toUpperCase()}</span>
+          </div>
         </div>
       </div>
 
@@ -127,6 +219,69 @@ export default function EnginePage() {
           )}
         </div>
       )}
+
+      {/* Proactive Intelligence Panel */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-foreground">Proactive Intelligence</h2>
+          <div className="flex items-center gap-2">
+            {proactiveTimestamp && (
+              <span className="text-[10px] text-muted">
+                Last scan: {new Date(proactiveTimestamp).toLocaleTimeString()}
+              </span>
+            )}
+            <button
+              onClick={runProactiveScan}
+              disabled={proactiveLoading}
+              className="px-3 py-1.5 text-xs font-medium bg-accent-dim text-accent rounded-lg hover:bg-accent hover:text-background transition-colors disabled:opacity-50"
+            >
+              {proactiveLoading ? "Analyzing..." : "Run Analysis"}
+            </button>
+          </div>
+        </div>
+
+        {proactiveActions.length > 0 ? (
+          <div className="space-y-2">
+            {proactiveActions.map((action, i) => {
+              const style = actionTypeStyles[action.type] || actionTypeStyles.improvement;
+              return (
+                <div key={i} className={`bg-card border border-card-border rounded-xl p-4 ${action.action_required ? "border-l-2 border-l-warning" : ""}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${style.bg} ${style.color}`}>
+                          {style.label}
+                        </span>
+                        <span className={`text-[10px] font-bold ${priorityStyles[action.priority]}`}>
+                          {action.priority.toUpperCase()}
+                        </span>
+                        <span className="text-sm font-semibold text-foreground">{action.title}</span>
+                      </div>
+                      <p className="text-xs text-muted">{action.description}</p>
+                    </div>
+                    {action.signup_url && (
+                      <a
+                        href={action.signup_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="shrink-0 px-3 py-1.5 text-xs font-medium bg-accent text-background rounded-lg hover:opacity-90 transition-opacity"
+                      >
+                        Get Key
+                      </a>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="bg-card border border-card-border rounded-xl p-5 text-center">
+            <p className="text-sm text-muted">
+              Click &quot;Run Analysis&quot; to let the engine proactively find what APIs you need, revenue opportunities, and improvements.
+            </p>
+          </div>
+        )}
+      </div>
 
       {/* Quick Actions */}
       <div>
@@ -203,7 +358,7 @@ export default function EnginePage() {
 
       <div className="bg-card border border-card-border rounded-xl p-5">
         <h2 className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Multi-Agent Fleet</h2>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="border border-card-border rounded-lg p-3">
             <div className="flex items-center gap-2 mb-1">
               <span className="w-1.5 h-1.5 rounded-full bg-success" />
@@ -224,6 +379,13 @@ export default function EnginePage() {
               <span className="text-sm font-medium text-foreground">OpenClaw</span>
             </div>
             <p className="text-xs text-muted">Multi-platform gateway</p>
+          </div>
+          <div className="border border-card-border rounded-lg p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-warning" />
+              <span className="text-sm font-medium text-foreground">OpenRouter</span>
+            </div>
+            <p className="text-xs text-muted">300+ AI models gateway</p>
           </div>
         </div>
       </div>

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 
-type Agent = "claude" | "gemini" | "openclaw" | "orchestrate";
+type Agent = "claude" | "gemini" | "openclaw" | "openrouter" | "orchestrate";
 
 interface Message {
   id: string;
@@ -16,6 +16,7 @@ const agentStyles: Record<string, { label: string; color: string; bg: string }> 
   claude: { label: "Claude", color: "text-accent", bg: "bg-accent-dim" },
   gemini: { label: "Gemini", color: "text-cyan", bg: "bg-cyan-dim" },
   openclaw: { label: "OpenClaw", color: "text-purple", bg: "bg-purple-dim" },
+  openrouter: { label: "OpenRouter", color: "text-warning", bg: "bg-warning-dim" },
   orchestrate: { label: "Orchestrator", color: "text-warning", bg: "bg-warning-dim" },
   "claude-debug": { label: "Claude Debug", color: "text-danger", bg: "bg-danger-dim" },
   "gemini-debug": { label: "Gemini Debug", color: "text-danger", bg: "bg-danger-dim" },
@@ -25,6 +26,19 @@ const agentStyles: Record<string, { label: string; color: string; bg: string }> 
   user: { label: "You", color: "text-foreground", bg: "bg-card-border" },
   system: { label: "System", color: "text-muted", bg: "bg-muted-dim" },
 };
+
+const POPULAR_MODELS = [
+  { id: "google/gemini-2.0-flash-exp:free", label: "Gemini 2.0 Flash (Free)" },
+  { id: "meta-llama/llama-3.3-70b-instruct:free", label: "Llama 3.3 70B (Free)" },
+  { id: "qwen/qwen-2.5-72b-instruct:free", label: "Qwen 2.5 72B (Free)" },
+  { id: "deepseek/deepseek-chat-v3-0324:free", label: "DeepSeek V3 (Free)" },
+  { id: "mistralai/mistral-small-3.1-24b-instruct:free", label: "Mistral Small 3.1 (Free)" },
+  { id: "anthropic/claude-sonnet-4", label: "Claude Sonnet 4" },
+  { id: "openai/gpt-4o", label: "GPT-4o" },
+  { id: "google/gemini-2.5-pro-preview", label: "Gemini 2.5 Pro" },
+  { id: "anthropic/claude-opus-4", label: "Claude Opus 4" },
+  { id: "deepseek/deepseek-r1", label: "DeepSeek R1" },
+];
 
 function formatTime(date: Date) {
   return new Intl.DateTimeFormat("en-US", {
@@ -51,18 +65,20 @@ function CopyButton({ text }: { text: string }) {
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([{
     id: "welcome", role: "system", agent: "system",
-    content: "Agent Chat ready. Pick an agent or use Orchestrate for multi-agent pipeline (Claude plans -> Gemini reviews -> Claude executes -> auto-debug).",
+    content: "Agent Chat ready. Pick an agent or use OpenRouter for 300+ AI models. Orchestrate runs multi-agent pipeline.",
     timestamp: new Date(),
   }]);
   const [debugMsgs, setDebugMsgs] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [agent, setAgent] = useState<Agent>("claude");
+  const [agent, setAgent] = useState<Agent>("openrouter");
   const [isRunning, setIsRunning] = useState(false);
   const [autoDebug, setAutoDebug] = useState(true);
   const [showDebug, setShowDebug] = useState(false);
   const [showEvolve, setShowEvolve] = useState(false);
   const [evolveInstruction, setEvolveInstruction] = useState("");
   const [evolveAgent, setEvolveAgent] = useState<"claude" | "gemini">("claude");
+  const [selectedModel, setSelectedModel] = useState(POPULAR_MODELS[0].id);
+  const [chatHistory, setChatHistory] = useState<{ role: string; content: string }[]>([]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -85,10 +101,11 @@ export default function ChatPage() {
   const clearChat = () => {
     setMessages([]);
     setDebugMsgs([]);
+    setChatHistory([]);
     addMsg({ role: "system", agent: "system", content: "Chat cleared." });
   };
 
-  const streamResponse = async (endpoint: string, body: Record<string, unknown>) => {
+  const streamCliResponse = async (endpoint: string, body: Record<string, unknown>) => {
     setIsRunning(true);
     try {
       const res = await fetch(endpoint, {
@@ -138,7 +155,6 @@ export default function ChatPage() {
           if (!line.trim()) continue;
           try {
             const evt = JSON.parse(line);
-
             if (evt.type === "done") {
               flushCurrent();
               addMsg({ role: "system", agent: "system", content: `Done (exit: ${evt.exitCode ?? "ok"})` });
@@ -171,7 +187,80 @@ export default function ChatPage() {
     } catch (err) {
       addMsg({ role: "error", agent: "system", content: err instanceof Error ? err.message : String(err) });
     }
+    setIsRunning(false);
+    inputRef.current?.focus();
+  };
 
+  const streamOpenRouter = async (prompt: string) => {
+    setIsRunning(true);
+    const newHistory = [...chatHistory, { role: "user", content: prompt }];
+    setChatHistory(newHistory);
+
+    try {
+      const res = await fetch("/api/openrouter/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: selectedModel,
+          messages: newHistory.map((m) => ({
+            role: m.role as "user" | "assistant",
+            content: m.content,
+          })),
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        addMsg({ role: "error", agent: "openrouter", content: errData.error || `Error ${res.status}` });
+        setIsRunning(false);
+        return;
+      }
+
+      const reader = res.body?.getReader();
+      if (!reader) { addMsg({ role: "error", agent: "openrouter", content: "No stream" }); setIsRunning(false); return; }
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let fullContent = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const evt = JSON.parse(line);
+            if (evt.type === "content") {
+              fullContent += evt.data;
+              const content = fullContent;
+              setMessages((prev) => {
+                const last = prev[prev.length - 1];
+                if (last?.agent === "openrouter" && last.role === "agent") {
+                  return [...prev.slice(0, -1), { ...last, content, timestamp: new Date() }];
+                }
+                return [...prev, { id: crypto.randomUUID(), role: "agent", agent: "openrouter", content, timestamp: new Date() }];
+              });
+            } else if (evt.type === "done") {
+              const info = evt.usage
+                ? ` (${evt.usage.prompt_tokens}+${evt.usage.completion_tokens} tokens)`
+                : "";
+              addMsg({ role: "system", agent: "system", content: `Done${info}` });
+            }
+          } catch { /* skip */ }
+        }
+      }
+
+      if (fullContent) {
+        setChatHistory((prev) => [...prev, { role: "assistant", content: fullContent }]);
+      }
+    } catch (err) {
+      addMsg({ role: "error", agent: "openrouter", content: err instanceof Error ? err.message : String(err) });
+    }
     setIsRunning(false);
     inputRef.current?.focus();
   };
@@ -182,10 +271,13 @@ export default function ChatPage() {
     setInput("");
     addMsg({ role: "user", agent: "user", content: prompt });
 
-    const isOrch = agent === "orchestrate";
-    const endpoint = isOrch ? "/api/agent/orchestrate" : "/api/agent/run";
-    const body = isOrch ? { task: prompt } : { agent, prompt, autoDebug };
-    await streamResponse(endpoint, body);
+    if (agent === "openrouter") {
+      await streamOpenRouter(prompt);
+    } else if (agent === "orchestrate") {
+      await streamCliResponse("/api/agent/orchestrate", { task: prompt });
+    } else {
+      await streamCliResponse("/api/agent/run", { agent, prompt, autoDebug });
+    }
   };
 
   const handleEvolve = async () => {
@@ -193,7 +285,7 @@ export default function ChatPage() {
     const instruction = evolveInstruction.trim();
     setEvolveInstruction("");
     addMsg({ role: "user", agent: "user", content: `[EVOLVE] ${instruction}` });
-    await streamResponse("/api/agent/evolve", {
+    await streamCliResponse("/api/agent/evolve", {
       target: "self",
       instruction,
       agent: evolveAgent,
@@ -213,7 +305,7 @@ export default function ChatPage() {
       <div className="flex items-center justify-between mb-3">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Agent Chat</h1>
-          <p className="text-xs text-muted">Agents execute commands and write code. Ctrl+Enter or Enter to send.</p>
+          <p className="text-xs text-muted">Multi-agent + OpenRouter (300+ models). Ctrl+Enter or Enter to send.</p>
         </div>
         <div className="flex items-center gap-3">
           <label className="flex items-center gap-1.5 text-xs text-muted cursor-pointer">
@@ -325,8 +417,9 @@ export default function ChatPage() {
 
       {/* Input */}
       <div className="border border-card-border rounded-xl bg-card p-3">
-        <div className="flex gap-1.5 mb-2">
-          {(["claude", "gemini", "openclaw", "orchestrate"] as Agent[]).map((a) => {
+        {/* Agent selector */}
+        <div className="flex gap-1.5 mb-2 flex-wrap">
+          {(["openrouter", "claude", "gemini", "openclaw", "orchestrate"] as Agent[]).map((a) => {
             const s = agentStyles[a];
             return (
               <button key={a} onClick={() => setAgent(a)} disabled={isRunning}
@@ -338,9 +431,37 @@ export default function ChatPage() {
             );
           })}
         </div>
+
+        {/* Model selector for OpenRouter */}
+        {agent === "openrouter" && (
+          <div className="mb-2">
+            <select
+              value={selectedModel}
+              onChange={(e) => setSelectedModel(e.target.value)}
+              disabled={isRunning}
+              className="w-full bg-card-border text-foreground text-xs rounded-lg px-2 py-1.5 outline-none border border-card-border"
+            >
+              <optgroup label="Free Models">
+                {POPULAR_MODELS.filter((m) => m.id.includes(":free")).map((m) => (
+                  <option key={m.id} value={m.id}>{m.label}</option>
+                ))}
+              </optgroup>
+              <optgroup label="Premium Models">
+                {POPULAR_MODELS.filter((m) => !m.id.includes(":free")).map((m) => (
+                  <option key={m.id} value={m.id}>{m.label}</option>
+                ))}
+              </optgroup>
+            </select>
+          </div>
+        )}
+
         <div className="flex gap-2">
           <textarea ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown}
-            placeholder={agent === "orchestrate" ? "Task for multi-agent team..." : `Message ${agentStyles[agent].label}...`}
+            placeholder={
+              agent === "orchestrate" ? "Task for multi-agent team..." :
+              agent === "openrouter" ? `Chat with ${POPULAR_MODELS.find(m => m.id === selectedModel)?.label || selectedModel}...` :
+              `Message ${agentStyles[agent].label}...`
+            }
             disabled={isRunning} rows={2}
             className="flex-1 bg-transparent text-foreground text-sm resize-none outline-none placeholder-muted" />
           <button onClick={handleSubmit} disabled={isRunning || !input.trim()}
