@@ -10,6 +10,7 @@ const navItems = [
   { href: "/noticeboard", label: "Notice Board", icon: "N" },
   { href: "/chat", label: "Agent Chat", icon: "C" },
   { href: "/models", label: "Models", icon: "M" },
+  { href: "/research", label: "Research", icon: "?" },
   { href: "/revenue", label: "Revenue", icon: "R" },
   { href: "/tasks", label: "Tasks", icon: "T" },
   { href: "/skills", label: "Skills", icon: "K" },
