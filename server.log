@@ -1,0 +1,27 @@
+
+> autonomous-dashboard@0.1.0 dev
+> next dev --hostname 0.0.0.0
+
+⚠ Invalid next.config.ts options detected:
+⚠     Unrecognized key(s) in object: 'allowedDevices'
+⚠ See more info here: https://nextjs.org/docs/messages/invalid-next-config
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://0.0.0.0:3000
+
+✓ Starting...
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+
+✓ Ready in 3s
+○ Compiling / ...
+ GET / 200 in 5.9s (compile: 5.4s, render: 437ms)
+ GET /api/engine 200 in 959ms (compile: 942ms, render: 17ms)
+ GET /api/openrouter/usage 500 in 1005ms (compile: 891ms, render: 114ms)
+ GET /api/engine/proactive 200 in 1046ms (compile: 1018ms, render: 28ms)
+ GET /api/openrouter/usage 500 in 169ms (compile: 20ms, render: 149ms)
+ POST /api/engine/auto-resume 200 in 1220ms (compile: 784ms, render: 436ms)
+ GET /vault 200 in 1008ms (compile: 814ms, render: 193ms)
+ GET /api/openrouter/usage 500 in 11ms (compile: 3ms, render: 8ms)
