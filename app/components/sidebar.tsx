@@ -18,6 +18,7 @@ const navItems = [
   { href: "/arena", label: "Arena", icon: "!" },
   { href: "/skills", label: "Skills", icon: "K" },
   { href: "/vault", label: "Vault", icon: "V" },
+  { href: "/telegram", label: "Telegram Bot", icon: ">" },
   { href: "/finance", label: "Self-Finance", icon: "$" },
   { href: "/logs", label: "Logs", icon: "L" },
 ];

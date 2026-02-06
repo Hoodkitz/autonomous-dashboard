@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { readFile, writeFile, mkdir, stat } from "fs/promises";
 import { join } from "path";
+import { smartAI } from "@/app/lib/smart-ai";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -9,7 +10,6 @@ const HOME = process.env.USERPROFILE || process.env.HOME || "~";
 const ENGINE_DIR = join(HOME, ".autonomous-engine");
 const GUARDIAN_DIR = join(ENGINE_DIR, "guardian");
 const STATE_FILE = join(GUARDIAN_DIR, "state.json");
-const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY || "";
 
 // ============================================================
 // GUARDIAN: All-seeing AI that watches, diagnoses, and auto-fixes
@@ -83,23 +83,8 @@ async function checkEndpoint(url: string, timeout = 5000): Promise<{ ok: boolean
 }
 
 async function aiCall(systemPrompt: string, userPrompt: string): Promise<string> {
-  if (!OPENROUTER_KEY) return "ERROR: No API key";
-  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${OPENROUTER_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "google/gemini-2.0-flash-001",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      max_tokens: 3000,
-      temperature: 0.3,
-    }),
-  });
-  if (!res.ok) return `ERROR: ${res.status}`;
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content || "";
+  const result = await smartAI(systemPrompt, userPrompt, { maxTokens: 3000, temperature: 0.3 });
+  return result.content;
 }
 
 // ============================================================

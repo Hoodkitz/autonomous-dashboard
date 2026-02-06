@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { readFile, writeFile, mkdir, readdir } from "fs/promises";
 import { join } from "path";
+import { smartAI } from "@/app/lib/smart-ai";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -10,7 +11,6 @@ const ENGINE_DIR = join(HOME, ".autonomous-engine");
 const SWARM_DIR = join(ENGINE_DIR, "swarm");
 const REGISTRY_FILE = join(SWARM_DIR, "registry.json");
 const STATE_FILE = join(SWARM_DIR, "state.json");
-const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY || "";
 
 // ============================================================
 // AGENT TYPES - Each agent is a specialized AI persona
@@ -333,27 +333,9 @@ async function saveRegistry(agents: AgentDef[]): Promise<void> {
   await writeFile(REGISTRY_FILE, JSON.stringify(custom, null, 2), "utf-8");
 }
 
-async function aiCall(systemPrompt: string, userPrompt: string, model = "google/gemini-2.0-flash-001"): Promise<{ content: string; tokens: number }> {
-  if (!OPENROUTER_KEY) return { content: "ERROR: No API key", tokens: 0 };
-  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${OPENROUTER_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      max_tokens: 4000,
-      temperature: 0.7,
-    }),
-  });
-  if (!res.ok) return { content: `ERROR: ${res.status}`, tokens: 0 };
-  const data = await res.json();
-  return {
-    content: data.choices?.[0]?.message?.content || "",
-    tokens: data.usage?.total_tokens || 0,
-  };
+async function aiCall(systemPrompt: string, userPrompt: string): Promise<{ content: string; tokens: number }> {
+  const result = await smartAI(systemPrompt, userPrompt);
+  return { content: result.content, tokens: result.tokens };
 }
 
 function extractJSON(text: string): Record<string, unknown> | null {
