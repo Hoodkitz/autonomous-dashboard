@@ -8,6 +8,7 @@ export const maxDuration = 300;
 
 const HOME = process.env.USERPROFILE || process.env.HOME || "~";
 const ENGINE_DIR = join(HOME, ".autonomous-engine");
+const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY || "";
 const GUARDIAN_DIR = join(ENGINE_DIR, "guardian");
 const STATE_FILE = join(GUARDIAN_DIR, "state.json");
 
@@ -109,6 +110,9 @@ async function runAllChecks(baseUrl: string): Promise<HealthCheck[]> {
     { id: "api-openrouter", name: "OpenRouter API", target: "/api/openrouter/usage" },
     { id: "api-niche-hunter", name: "Niche Hunter API", target: "/api/swarm/niche-hunter" },
     { id: "api-guardian", name: "Guardian API (self)", target: "/api/guardian" },
+    { id: "api-deploy", name: "Deploy API", target: "/api/deploy" },
+    { id: "api-smart-router", name: "Smart Router API", target: "/api/smart-router" },
+    { id: "api-telegram", name: "Telegram API", target: "/api/telegram" },
   ];
 
   const apiResults = await Promise.allSettled(

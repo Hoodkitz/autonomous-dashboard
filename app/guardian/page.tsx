@@ -56,7 +56,7 @@ export default function GuardianPage() {
   const [state, setState] = useState<GuardianState | null>(null);
   const [scanning, setScanning] = useState(false);
   const [events, setEvents] = useState<StreamEvent[]>([]);
-  const [autoWatch, setAutoWatch] = useState(false);
+  const [autoWatch, setAutoWatch] = useState(true); // Auto-start watching
   const logRef = useRef<HTMLDivElement>(null);
   const watchInterval = useRef<NodeJS.Timeout | null>(null);
 
@@ -147,7 +147,7 @@ export default function GuardianPage() {
   const unresolvedAlerts = state.alerts.filter((a) => !a.resolved);
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl">
+    <div className="space-y-6 max-w-6xl">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
