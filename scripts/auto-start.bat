@@ -1,46 +1,55 @@
 @echo off
 REM ============================================
 REM Autonomous Symbiotic Engine - Auto-Start
-REM Place shortcut in Windows Startup folder:
-REM   shell:startup
+REM Starts dashboard + watchdog on login
 REM ============================================
 
-title Autonomous Engine Dashboard
+title Autonomous Engine Launcher
+
+set DASHBOARD_DIR=%USERPROFILE%\autonomous-dashboard
+set PORT=3000
 
 echo ============================================
 echo  Autonomous Symbiotic Engine - Starting...
 echo ============================================
 
-cd /d "%USERPROFILE%\autonomous-dashboard"
+cd /d "%DASHBOARD_DIR%"
 
-REM Check if port 3000 is already in use
-netstat -ano | findstr ":3000" >nul 2>&1
+REM Remove any previous stop signal
+if exist "%DASHBOARD_DIR%\scripts\.watchdog-stop" del "%DASHBOARD_DIR%\scripts\.watchdog-stop"
+
+REM Check if already running
+netstat -ano | findstr ":%PORT%" | findstr "LISTENING" >nul 2>&1
 if %ERRORLEVEL%==0 (
-    echo Dashboard already running on port 3000
-    echo Opening browser...
-    start http://localhost:3000
-    goto :check_engine
+    echo Dashboard already running on port %PORT%
+    goto :start_watchdog
 )
 
 echo Starting Next.js dev server...
-start /min cmd /c "cd /d %USERPROFILE%\autonomous-dashboard && npm run dev"
+start /min cmd /c "cd /d %DASHBOARD_DIR% && npm run dev"
 
-REM Wait for server to start
-echo Waiting for server to be ready...
+echo Waiting for server...
 :wait_loop
 timeout /t 2 /nobreak >nul
-curl -s http://localhost:3000 >nul 2>&1
+curl -s http://localhost:%PORT% >nul 2>&1
 if %ERRORLEVEL% neq 0 goto :wait_loop
 
 echo Server is ready!
-start http://localhost:3000
 
-:check_engine
-REM Check if engine has interrupted state and trigger auto-resume
-echo Checking for interrupted engine state...
-curl -s http://localhost:3000/api/engine/auto-resume -X POST >nul 2>&1
+:start_watchdog
+REM Start the self-healing watchdog in background
+echo Starting self-healing watchdog...
+start /min cmd /c "cd /d %DASHBOARD_DIR%\scripts && watchdog.bat"
+
+REM Trigger auto-resume
+echo Triggering auto-resume...
+curl -s http://localhost:%PORT%/api/engine/auto-resume -X POST >nul 2>&1
+
+REM Open browser
+start http://localhost:%PORT%
 
 echo ============================================
-echo  Dashboard running at http://localhost:3000
-echo  Engine auto-resume triggered
+echo  Dashboard: http://localhost:%PORT%
+echo  Watchdog:  ACTIVE (self-healing enabled)
+echo  Auto-resume: triggered
 echo ============================================
