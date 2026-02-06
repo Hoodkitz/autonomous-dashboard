@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 
 const navItems = [
+  { href: "/guardian", label: "Guardian AI", icon: "G" },
   { href: "/", label: "Engine", icon: "E" },
   { href: "/symbiosis", label: "Symbiosis", icon: "S" },
   { href: "/noticeboard", label: "Notice Board", icon: "N" },
@@ -14,6 +15,7 @@ const navItems = [
   { href: "/revenue", label: "Revenue", icon: "R" },
   { href: "/tasks", label: "Tasks", icon: "T" },
   { href: "/swarm", label: "Agent Swarm", icon: "W" },
+  { href: "/arena", label: "Arena", icon: "!" },
   { href: "/skills", label: "Skills", icon: "K" },
   { href: "/vault", label: "Vault", icon: "V" },
   { href: "/finance", label: "Self-Finance", icon: "$" },
