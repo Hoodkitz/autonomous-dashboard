@@ -19,6 +19,7 @@ const navItems = [
   { href: "/skills", label: "Skills", icon: "K" },
   { href: "/vault", label: "Vault", icon: "V" },
   { href: "/telegram", label: "Telegram Bot", icon: ">" },
+  { href: "/deploy", label: "Deploy Hub", icon: "D" },
   { href: "/finance", label: "Self-Finance", icon: "$" },
   { href: "/logs", label: "Logs", icon: "L" },
 ];
