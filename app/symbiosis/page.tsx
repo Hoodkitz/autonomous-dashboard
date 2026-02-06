@@ -16,6 +16,24 @@ interface EngineState {
   failedAttempts: number;
 }
 
+interface PipelineStatus {
+  active: boolean;
+  state?: {
+    id: string;
+    phase: string;
+    goal: string;
+    iteration: number;
+    cost: { total_usd: number; breakdown: Record<string, number>; api_calls: number };
+    plan: Array<{ step: string; agent: string; status: string }>;
+    errors: string[];
+    research_findings: string[];
+    artifacts: Record<string, string>;
+    created_at: string;
+    updated_at: string;
+  };
+  message?: string;
+}
+
 interface Capability {
   id: string;
   name: string;
@@ -60,6 +78,9 @@ export default function SymbiosisPage() {
   const [log, setLog] = useState<string[]>([]);
   const [useUnified, setUseUnified] = useState(true);
   const [researchLoading, setResearchLoading] = useState(false);
+  const [pipeline, setPipeline] = useState<PipelineStatus | null>(null);
+  const [pipelineGoal, setPipelineGoal] = useState("");
+  const [pipelineRunning, setPipelineRunning] = useState(false);
 
   const fetchState = useCallback(async () => {
     try {
@@ -69,9 +90,17 @@ export default function SymbiosisPage() {
     setLoading(false);
   }, []);
 
+  const fetchPipeline = useCallback(async () => {
+    try {
+      const res = await fetch("/api/pipeline");
+      if (res.ok) setPipeline(await res.json());
+    } catch { /* ignore */ }
+  }, []);
+
   useEffect(() => {
     fetchState();
-    const interval = setInterval(fetchState, 3000);
+    fetchPipeline();
+    const interval = setInterval(() => { fetchState(); fetchPipeline(); }, 3000);
 
     // Fetch capabilities
     fetch("/api/orchestrator")
@@ -80,7 +109,7 @@ export default function SymbiosisPage() {
       .catch(() => {});
 
     return () => clearInterval(interval);
-  }, [fetchState]);
+  }, [fetchState, fetchPipeline]);
 
   const addLog = (msg: string) => {
     setLog((p) => [...p, `[${new Date().toLocaleTimeString()}] ${msg}`]);
@@ -253,6 +282,102 @@ export default function SymbiosisPage() {
     setResearchLoading(false);
   };
 
+  const startPipeline = async (goal: string) => {
+    if (!goal.trim()) return;
+    setPipelineRunning(true);
+    addLog(`PIPELINE: Starting autonomous pipeline for "${goal.slice(0, 80)}..."`);
+    try {
+      const res = await fetch("/api/pipeline", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "start", goal }),
+      });
+
+      if (res.status === 409) {
+        const data = await res.json();
+        addLog(`PIPELINE: Already active (${data.phase}). Stop it first.`);
+        setPipelineRunning(false);
+        return;
+      }
+
+      const reader = res.body?.getReader();
+      if (!reader) { setPipelineRunning(false); return; }
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const evt = JSON.parse(line);
+            if (evt.type === "pipeline_start") addLog(`PIPELINE: Started (${evt.id}) - Budget: ${evt.budget}`);
+            else if (evt.type === "phase") addLog(`PIPELINE [${evt.phase}]: ${evt.message}`);
+            else if (evt.type === "research") addLog(`PIPELINE: Found opportunity: ${evt.opportunity?.name || "unknown"}`);
+            else if (evt.type === "plan") addLog(`PIPELINE: Plan with ${evt.steps} steps created`);
+            else if (evt.type === "step") addLog(`PIPELINE: Step ${evt.index + 1}/${evt.total} [${evt.agent}]: ${evt.step?.slice(0, 100)}`);
+            else if (evt.type === "step_done") addLog(`PIPELINE: Step ${evt.index + 1} ${evt.success ? "DONE" : "FAILED"}`);
+            else if (evt.type === "step_retry") addLog(`PIPELINE: Retrying step ${evt.index + 1}...`);
+            else if (evt.type === "review") addLog(`PIPELINE: Review: ${evt.content?.slice(0, 200)}`);
+            else if (evt.type === "checkpoint") addLog(`PIPELINE: AWAITING GO - Cost: ${evt.cost_so_far}`);
+            else if (evt.type === "optimization") addLog(`PIPELINE: Optimization: ${evt.insights?.slice(0, 200)}`);
+            else if (evt.type === "pipeline_complete") addLog(`PIPELINE: Complete! Phase: ${evt.phase}, Cost: $${evt.cost?.total_usd?.toFixed(4)}`);
+            else if (evt.type === "error") addLog(`PIPELINE ERROR: ${evt.message}`);
+            else if (evt.type === "budget") addLog(`PIPELINE: ${evt.message}`);
+          } catch { /* skip */ }
+        }
+      }
+      await fetchPipeline();
+    } catch (err) {
+      addLog(`PIPELINE ERROR: ${err}`);
+    }
+    setPipelineRunning(false);
+  };
+
+  const pipelineAction = async (action: "go" | "stop") => {
+    setPipelineRunning(true);
+    addLog(`PIPELINE: Sending ${action.toUpperCase()}...`);
+    try {
+      const res = await fetch("/api/pipeline", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+
+      const reader = res.body?.getReader();
+      if (!reader) { setPipelineRunning(false); return; }
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const evt = JSON.parse(line);
+            addLog(`PIPELINE: ${evt.type} - ${evt.message || JSON.stringify(evt).slice(0, 120)}`);
+          } catch { /* skip */ }
+        }
+      }
+      await fetchPipeline();
+    } catch (err) {
+      addLog(`PIPELINE ERROR: ${err}`);
+    }
+    setPipelineRunning(false);
+  };
+
   if (loading) return <div className="text-muted p-6">Loading engine state...</div>;
   if (!state) return <div className="text-danger p-6">Failed to load engine state</div>;
 
@@ -326,6 +451,121 @@ export default function SymbiosisPage() {
         </div>
         {state.taskDescription && (
           <p className="text-xs text-muted">Active: <span className="text-foreground">{state.taskDescription}</span></p>
+        )}
+      </div>
+
+      {/* Autonomous Pipeline */}
+      <div className="bg-card border border-accent rounded-xl p-5">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="text-xs font-semibold text-accent uppercase tracking-wider">Autonomous Pipeline</h2>
+            <p className="text-[10px] text-muted mt-0.5">Plan-and-Execute + ReAct loop with budget controls</p>
+          </div>
+          {pipeline?.active && pipeline.state && (
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-muted">
+                Cost: ${pipeline.state.cost.total_usd.toFixed(4)} | Iter: {pipeline.state.iteration}
+              </span>
+              <span className="w-2 h-2 rounded-full bg-success pulse-glow" />
+              <span className="text-[10px] font-medium text-success uppercase">{pipeline.state.phase}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Pipeline input - only when not running */}
+        {!pipeline?.active && !pipelineRunning && (
+          <div className="flex gap-2 mb-3">
+            <input
+              value={pipelineGoal}
+              onChange={(e) => setPipelineGoal(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && startPipeline(pipelineGoal)}
+              placeholder="Revenue goal (e.g. 'Build AI chatbot SaaS that earns $500/mo')..."
+              className="flex-1 bg-transparent border border-card-border rounded-lg px-3 py-2 text-sm text-foreground outline-none placeholder-muted focus:border-accent"
+            />
+            <button
+              onClick={() => startPipeline(pipelineGoal)}
+              disabled={!pipelineGoal.trim() || pipelineRunning}
+              className="px-4 py-2 bg-accent text-background text-sm font-medium rounded-lg hover:opacity-90 disabled:opacity-30"
+            >
+              Launch Pipeline
+            </button>
+          </div>
+        )}
+
+        {/* Pipeline status */}
+        {pipeline?.state && (
+          <div className="space-y-3">
+            {/* Goal */}
+            <p className="text-xs text-muted">Goal: <span className="text-foreground">{pipeline.state.goal}</span></p>
+
+            {/* Plan steps */}
+            {pipeline.state.plan.length > 0 && (
+              <div className="space-y-1">
+                <p className="text-[10px] font-semibold text-muted uppercase">Build Plan</p>
+                {pipeline.state.plan.map((step, i) => (
+                  <div key={i} className="flex items-center gap-2 text-[11px]">
+                    <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold ${
+                      step.status === "done" ? "bg-success text-background" :
+                      step.status === "running" ? "bg-accent text-background pulse-glow" :
+                      step.status === "failed" ? "bg-danger text-background" :
+                      "bg-card-border text-muted"
+                    }`}>{i + 1}</span>
+                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-medium ${
+                      step.agent === "claude" ? "bg-accent-dim text-accent" :
+                      step.agent === "gemini" ? "bg-success-dim text-success" :
+                      "bg-warning-dim text-warning"
+                    }`}>{step.agent}</span>
+                    <span className="text-muted flex-1 truncate">{step.step}</span>
+                    <span className={`text-[9px] font-medium ${
+                      step.status === "done" ? "text-success" :
+                      step.status === "running" ? "text-accent" :
+                      step.status === "failed" ? "text-danger" :
+                      "text-muted"
+                    }`}>{step.status}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Awaiting go */}
+            {pipeline.state.phase === "awaiting_go" && (
+              <div className="flex gap-2 mt-2">
+                <button
+                  onClick={() => pipelineAction("go")}
+                  disabled={pipelineRunning}
+                  className="px-4 py-2 bg-success text-background text-sm font-medium rounded-lg hover:opacity-90 disabled:opacity-30"
+                >
+                  GO - Deploy
+                </button>
+                <button
+                  onClick={() => pipelineAction("stop")}
+                  disabled={pipelineRunning}
+                  className="px-4 py-2 bg-danger text-background text-sm font-medium rounded-lg hover:opacity-90 disabled:opacity-30"
+                >
+                  Stop
+                </button>
+              </div>
+            )}
+
+            {/* Errors */}
+            {pipeline.state.errors.length > 0 && (
+              <div className="text-[10px] text-danger space-y-0.5">
+                {pipeline.state.errors.map((e, i) => <div key={i}>{e}</div>)}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* No pipeline */}
+        {!pipeline?.state && !pipelineRunning && (
+          <p className="text-[11px] text-muted">No pipeline running. Enter a revenue goal above to start the autonomous build pipeline.</p>
+        )}
+
+        {pipelineRunning && !pipeline?.active && (
+          <div className="flex items-center gap-2 text-[11px] text-accent">
+            <span className="w-2 h-2 rounded-full bg-accent pulse-glow" />
+            Pipeline executing...
+          </div>
         )}
       </div>
 
