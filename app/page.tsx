@@ -69,6 +69,12 @@ export default function EnginePage() {
   const [proactiveLoading, setProactiveLoading] = useState(false);
   const [proactiveTimestamp, setProactiveTimestamp] = useState<string | null>(null);
   const [usageInfo, setUsageInfo] = useState<{ usage: number; limit: number | null } | null>(null);
+  const [resumeBanner, setResumeBanner] = useState<{
+    needs_attention: string[];
+    pipeline_goal?: string;
+    pipeline_phase?: string;
+    engine_task?: string;
+  } | null>(null);
 
   const fetchState = useCallback(async () => {
     try {
@@ -81,6 +87,24 @@ export default function EnginePage() {
   useEffect(() => {
     fetchState();
     const interval = setInterval(fetchState, 3000);
+
+    // Auto-resume check on startup
+    fetch("/api/engine/auto-resume", { method: "POST" })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.ok && data.actions?.length > 0) {
+          // Fetch full resume status
+          fetch("/api/engine/auto-resume")
+            .then((r) => r.json())
+            .then((status) => {
+              if (status.needs_attention?.length > 0) {
+                setResumeBanner(status);
+              }
+            })
+            .catch(() => {});
+        }
+      })
+      .catch(() => {});
 
     // Load cached proactive actions
     fetch("/api/engine/proactive")
@@ -184,6 +208,37 @@ export default function EnginePage() {
           </div>
         </div>
       </div>
+
+      {/* Auto-Resume Banner */}
+      {resumeBanner && resumeBanner.needs_attention.length > 0 && (
+        <div className="bg-warning-dim border border-warning rounded-xl p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-warning">Interrupted Work Detected</p>
+              <p className="text-xs text-muted mt-1">
+                {resumeBanner.pipeline_goal && `Pipeline: "${resumeBanner.pipeline_goal}" (${resumeBanner.pipeline_phase})`}
+                {resumeBanner.engine_task && `Engine: "${resumeBanner.engine_task}"`}
+              </p>
+              <div className="flex gap-1 mt-1.5">
+                {resumeBanner.needs_attention.map((item, i) => (
+                  <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-warning text-background font-medium">{item}</span>
+                ))}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <a href="/symbiosis" className="px-3 py-1.5 bg-success text-background text-xs font-medium rounded-lg hover:opacity-90">
+                Resume
+              </a>
+              <button
+                onClick={() => setResumeBanner(null)}
+                className="px-3 py-1.5 bg-card-border text-muted text-xs font-medium rounded-lg hover:text-foreground"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="bg-card border border-card-border rounded-xl p-4">
