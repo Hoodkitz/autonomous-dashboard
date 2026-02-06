@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  allowedDevices: undefined, // Allow all devices
+  serverExternalPackages: ["playwright"],
 };
 
 export default nextConfig;

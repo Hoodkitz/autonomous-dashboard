@@ -14,6 +14,7 @@ const navItems = [
   { href: "/tasks", label: "Tasks", icon: "T" },
   { href: "/skills", label: "Skills", icon: "K" },
   { href: "/vault", label: "Vault", icon: "V" },
+  { href: "/finance", label: "Self-Finance", icon: "$" },
   { href: "/logs", label: "Logs", icon: "L" },
 ];
 

@@ -26,7 +26,7 @@ if %ERRORLEVEL%==0 (
 )
 
 echo Starting Next.js dev server...
-start /min cmd /c "cd /d %DASHBOARD_DIR% && npm run dev"
+start /min cmd /c "cd /d %DASHBOARD_DIR% && npm run dev -- --hostname 0.0.0.0"
 
 echo Waiting for server...
 :wait_loop
