@@ -565,6 +565,29 @@ export default function EnginePage() {
         </div>
       </div>
 
+      {/* Agent Swarm Quick Launch */}
+      <div className="relative overflow-hidden rounded-2xl border border-amber-500/40 bg-gradient-to-br from-card via-card to-amber-500/5 p-5">
+        <div className="absolute top-0 left-0 w-48 h-48 bg-amber-500/5 rounded-full blur-3xl -translate-y-1/2 -translate-x-1/2" />
+        <div className="relative flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
+              Agent Swarm &amp; Niche Hunter
+            </h2>
+            <p className="text-xs text-muted mt-1">
+              Self-evolving agent hive — discovers AI gaps, builds solutions, monetizes autonomously
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <a
+              href="/swarm"
+              className="px-4 py-2 rounded-lg text-xs font-medium bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 transition-colors"
+            >
+              Open Swarm
+            </a>
+          </div>
+        </div>
+      </div>
+
       {/* Quick Actions */}
       <div>
         <h2 className="text-sm font-semibold text-foreground mb-3">Quick Actions</h2>

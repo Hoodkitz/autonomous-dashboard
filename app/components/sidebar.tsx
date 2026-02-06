@@ -13,6 +13,7 @@ const navItems = [
   { href: "/research", label: "Research", icon: "?" },
   { href: "/revenue", label: "Revenue", icon: "R" },
   { href: "/tasks", label: "Tasks", icon: "T" },
+  { href: "/swarm", label: "Agent Swarm", icon: "W" },
   { href: "/skills", label: "Skills", icon: "K" },
   { href: "/vault", label: "Vault", icon: "V" },
   { href: "/finance", label: "Self-Finance", icon: "$" },
