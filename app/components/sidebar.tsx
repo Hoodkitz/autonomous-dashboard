@@ -64,6 +64,12 @@ interface AgentStatus {
   status: "online" | "offline" | "error";
 }
 
+const statusColor: Record<string, string> = {
+  online: "bg-success",
+  offline: "bg-muted",
+  error: "bg-danger",
+};
+
 export function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
@@ -102,12 +108,6 @@ export function Sidebar() {
   function groupHasActive(group: NavGroup) {
     return group.items.some((item) => pathname === item.href);
   }
-
-  const statusColor: Record<string, string> = {
-    online: "bg-success",
-    offline: "bg-muted",
-    error: "bg-danger",
-  };
 
   const isHome = pathname === "/";
 
