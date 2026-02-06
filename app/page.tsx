@@ -61,6 +61,21 @@ function StatusDot({ status }: { status: string }) {
   return <span className={`w-2 h-2 rounded-full ${color} ${status === "running" || status === "in_progress" ? "pulse-glow" : ""}`} />;
 }
 
+interface MoneyPhase {
+  phase: string;
+  status: string;
+  data?: Record<string, unknown>;
+  message?: string;
+}
+
+interface MoneyMachineState {
+  active: boolean;
+  phases: MoneyPhase[];
+  product: Record<string, unknown> | null;
+  log: string[];
+  error: string | null;
+}
+
 export default function EnginePage() {
   const [state, setState] = useState<EngineState | null>(null);
   const [loading, setLoading] = useState(true);
@@ -75,6 +90,9 @@ export default function EnginePage() {
     pipeline_phase?: string;
     engine_task?: string;
   } | null>(null);
+  const [moneyMachine, setMoneyMachine] = useState<MoneyMachineState>({
+    active: false, phases: [], product: null, log: [], error: null,
+  });
 
   const fetchState = useCallback(async () => {
     try {
@@ -177,6 +195,83 @@ export default function EnginePage() {
       }
     } catch { /* error */ }
     setProactiveLoading(false);
+  };
+
+  const launchMoneyMachine = async () => {
+    setMoneyMachine({ active: true, phases: [], product: null, log: ["Igniting Ultra Autonomous Money Machine..."], error: null });
+
+    try {
+      const res = await fetch("/api/money-machine", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "start" }),
+      });
+
+      if (res.status === 409) {
+        setMoneyMachine((prev) => ({ ...prev, log: [...prev.log, "Already running. Check status."] }));
+        return;
+      }
+
+      const reader = res.body?.getReader();
+      if (!reader) return;
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const evt = JSON.parse(line);
+
+            if (evt.type === "start") {
+              setMoneyMachine((prev) => ({ ...prev, log: [...prev.log, `Run #${evt.runCount} started`] }));
+            } else if (evt.type === "phase") {
+              setMoneyMachine((prev) => {
+                const phases = [...prev.phases];
+                const idx = phases.findIndex((p) => p.phase === evt.phase);
+                if (idx >= 0) {
+                  phases[idx] = { ...phases[idx], ...evt };
+                } else {
+                  phases.push(evt);
+                }
+                return {
+                  ...prev,
+                  phases,
+                  log: [...prev.log, `[${evt.phase}] ${evt.message || evt.status}`],
+                };
+              });
+            } else if (evt.type === "complete") {
+              setMoneyMachine((prev) => ({
+                ...prev,
+                active: false,
+                product: evt.product,
+                log: [...prev.log, `COMPLETE: ${evt.product?.name} - ${evt.product?.tagline}`],
+              }));
+            } else if (evt.type === "error") {
+              setMoneyMachine((prev) => ({
+                ...prev,
+                active: false,
+                error: evt.error,
+                log: [...prev.log, `ERROR: ${evt.error}`],
+              }));
+            }
+          } catch { /* skip */ }
+        }
+      }
+    } catch (err) {
+      setMoneyMachine((prev) => ({
+        ...prev,
+        active: false,
+        error: err instanceof Error ? err.message : String(err),
+      }));
+    }
   };
 
   if (loading) return <div className="text-muted p-6">Loading...</div>;
@@ -336,6 +431,138 @@ export default function EnginePage() {
             </p>
           </div>
         )}
+      </div>
+
+      {/* ULTRA AUTONOMOUS MONEY MACHINE */}
+      <div className="relative overflow-hidden rounded-2xl border-2 border-accent bg-gradient-to-br from-card via-card to-accent/5 p-6">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-accent/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        <div className="relative">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+                Ultra Autonomous Evolve &amp; Earn
+              </h2>
+              <p className="text-xs text-muted mt-1">
+                AI researches market, builds product, deploys, monetizes &mdash; fully autonomous
+              </p>
+            </div>
+            <button
+              onClick={launchMoneyMachine}
+              disabled={moneyMachine.active}
+              className={`relative px-6 py-3 rounded-xl text-sm font-bold transition-all ${
+                moneyMachine.active
+                  ? "bg-accent/20 text-accent animate-pulse cursor-wait"
+                  : "bg-accent text-background hover:scale-105 hover:shadow-lg hover:shadow-accent/25 active:scale-95"
+              }`}
+            >
+              {moneyMachine.active ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-accent animate-ping" />
+                  Running...
+                </span>
+              ) : (
+                "LAUNCH"
+              )}
+            </button>
+          </div>
+
+          {/* Pipeline phases */}
+          {moneyMachine.phases.length > 0 && (
+            <div className="grid grid-cols-6 gap-1 mb-4">
+              {["research", "validate", "plan", "build", "deploy", "monetize"].map((phase) => {
+                const p = moneyMachine.phases.find((x) => x.phase === phase);
+                const status = p?.status || "pending";
+                return (
+                  <div
+                    key={phase}
+                    className={`text-center py-2 rounded-lg text-xs font-medium transition-all ${
+                      status === "done" ? "bg-success/20 text-success" :
+                      status === "running" ? "bg-accent/20 text-accent animate-pulse" :
+                      status === "failed" ? "bg-danger/20 text-danger" :
+                      "bg-card-border/50 text-muted"
+                    }`}
+                  >
+                    <div className="text-[10px] uppercase tracking-wider">{phase}</div>
+                    <div className="text-[9px] mt-0.5">
+                      {status === "done" ? "done" : status === "running" ? "..." : status === "failed" ? "fail" : ""}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Live log */}
+          {moneyMachine.log.length > 0 && (
+            <div className="bg-background/50 rounded-lg p-3 max-h-40 overflow-y-auto font-mono text-xs space-y-0.5">
+              {moneyMachine.log.map((line, i) => (
+                <div key={i} className={`${
+                  line.startsWith("ERROR") ? "text-danger" :
+                  line.startsWith("COMPLETE") ? "text-success font-bold" :
+                  line.startsWith("[") ? "text-accent" : "text-muted"
+                }`}>
+                  {line}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Product result */}
+          {moneyMachine.product && (
+            <div className="mt-4 bg-success/5 border border-success/30 rounded-xl p-4">
+              <h3 className="text-sm font-bold text-success mb-2">Product Generated</h3>
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <span className="text-muted">Name:</span>
+                  <span className="text-foreground ml-1 font-semibold">{String(moneyMachine.product.name)}</span>
+                </div>
+                <div>
+                  <span className="text-muted">Revenue est:</span>
+                  <span className="text-success ml-1 font-semibold">${String(moneyMachine.product.estimatedMonthlyRevenue)}/mo</span>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-muted">Tagline:</span>
+                  <span className="text-foreground ml-1">{String(moneyMachine.product.tagline)}</span>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-muted">Pricing:</span>
+                  <span className="text-foreground ml-1">
+                    Free: {String((moneyMachine.product.pricing as Record<string, unknown>)?.free)} |
+                    Pro: ${String((moneyMachine.product.pricing as Record<string, unknown>)?.proPrice)}/mo
+                  </span>
+                </div>
+              </div>
+              <p className="text-xs text-muted mt-2">
+                Code saved. Deploy with: <code className="text-accent">cd ~/.autonomous-engine/money-machine/products/product-*/deploy &amp;&amp; npm i &amp;&amp; npx vercel</code>
+              </p>
+            </div>
+          )}
+
+          {moneyMachine.error && (
+            <div className="mt-3 text-xs text-danger bg-danger/5 rounded-lg p-3">
+              {moneyMachine.error}
+            </div>
+          )}
+
+          {/* What it does */}
+          {moneyMachine.phases.length === 0 && !moneyMachine.product && (
+            <div className="grid grid-cols-6 gap-1">
+              {[
+                { label: "Research", desc: "AI finds profitable niche" },
+                { label: "Validate", desc: "Scores demand + feasibility" },
+                { label: "Plan", desc: "Full architecture + DB" },
+                { label: "Build", desc: "Generates complete code" },
+                { label: "Deploy", desc: "Vercel-ready package" },
+                { label: "Monetize", desc: "Pricing + finance tracking" },
+              ].map((step) => (
+                <div key={step.label} className="text-center py-2 rounded-lg bg-card-border/30">
+                  <div className="text-[10px] uppercase tracking-wider text-muted">{step.label}</div>
+                  <div className="text-[9px] text-muted/60 mt-0.5">{step.desc}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Quick Actions */}
