@@ -1,10 +1,4 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { readFile } from "fs/promises";
-import { join } from "path";
-import { homedir } from "os";
-
-const HOME = process.env.USERPROFILE || homedir();
-const VAULT_PATH = join(HOME, ".autonomous-engine", "vault", "keys.json");
 
 interface SupabaseConfig {
   url: string;
@@ -12,26 +6,41 @@ interface SupabaseConfig {
   connectionString: string;
 }
 
+let _configCache: SupabaseConfig | null = null;
+
 async function getSupabaseConfig(): Promise<SupabaseConfig> {
+  if (_configCache) return _configCache;
+
   // 1. env vars
   const url = process.env.SUPABASE_URL;
   const anonKey = process.env.SUPABASE_ANON_KEY;
   const connStr = process.env.DATABASE_URL;
 
   if (url && anonKey) {
-    return { url, anonKey, connectionString: connStr || "" };
+    _configCache = { url, anonKey, connectionString: connStr || "" };
+    return _configCache;
   }
 
-  // 2. vault
+  // 2. vault (Node.js only)
   try {
-    const vault = JSON.parse(await readFile(VAULT_PATH, "utf-8"));
-    const supa = vault.services?.supabase;
-    if (supa) {
-      return {
-        url: `https://${supa.host?.replace("db.", "").replace(":5432", "") || ""}`,
-        anonKey: supa.anon_key || anonKey || "",
-        connectionString: supa.connection_string || connStr || "",
-      };
+    if (typeof process !== "undefined" && process.versions && process.versions.node) {
+      const { readFile } = await import("fs/promises");
+      const { join } = await import("path");
+      const { homedir } = await import("os");
+
+      const HOME = process.env.USERPROFILE || homedir();
+      const VAULT_PATH = join(HOME, ".autonomous-engine", "vault", "keys.json");
+
+      const vault = JSON.parse(await readFile(VAULT_PATH, "utf-8"));
+      const supa = vault.services?.supabase;
+      if (supa) {
+        _configCache = {
+          url: `https://${supa.host?.replace("db.", "").replace(":5432", "") || ""}`,
+          anonKey: supa.anon_key || anonKey || "",
+          connectionString: supa.connection_string || connStr || "",
+        };
+        return _configCache;
+      }
     }
   } catch { /* fallthrough */ }
 
