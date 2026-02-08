@@ -4,6 +4,7 @@ import { join } from "path";
 import { smartAI } from "@/app/lib/smart-ai";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 export const maxDuration = 300;
 
 const HOME = process.env.USERPROFILE || process.env.HOME || "~";
@@ -447,7 +448,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Context accumulator - each agent's output feeds the next
-        let context: Record<string, unknown> = {};
+        const context: Record<string, unknown> = {};
         const cycleDir = join(SWARM_DIR, `cycle-${swarm.cycle}`);
         await mkdir(cycleDir, { recursive: true });
 

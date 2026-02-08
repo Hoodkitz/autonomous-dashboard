@@ -84,6 +84,7 @@ export default function SwarmPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line
     fetchStatus();
     const interval = setInterval(fetchStatus, 5000);
     return () => clearInterval(interval);

@@ -1,6 +1,5 @@
 import { readFile, writeFile, appendFile, mkdir } from "fs/promises";
 import { join, dirname } from "path";
-import { existsSync } from "fs";
 import { homedir } from "os";
 
 const HOME = process.env.USERPROFILE || homedir();
@@ -58,7 +57,8 @@ export interface RevenueTracker {
 async function readJson<T>(relPath: string, fallback: T): Promise<T> {
   try {
     const full = join(ENGINE_DIR, relPath);
-    if (!existsSync(full)) return fallback;
+    // OPTIMIZATION: Removed blocking existsSync check.
+    // Directly attempting read is faster and doesn't block event loop.
     const data = await readFile(full, "utf-8");
     return JSON.parse(data) as T;
   } catch {
@@ -69,7 +69,9 @@ async function readJson<T>(relPath: string, fallback: T): Promise<T> {
 export async function writeJson(relPath: string, data: unknown): Promise<void> {
   const full = join(ENGINE_DIR, relPath);
   const dir = dirname(full);
-  if (!existsSync(dir)) await mkdir(dir, { recursive: true });
+  // OPTIMIZATION: Removed blocking existsSync check.
+  // mkdir with recursive: true is efficient and safe.
+  await mkdir(dir, { recursive: true });
   await writeFile(full, JSON.stringify(data, null, 2), "utf-8");
 }
 
@@ -107,7 +109,8 @@ export async function appendLog(line: string): Promise<void> {
   const date = new Date().toISOString().split("T")[0];
   const logFile = join(ENGINE_DIR, "progress", `${date}.log`);
   const logDir = join(ENGINE_DIR, "progress");
-  if (!existsSync(logDir)) await mkdir(logDir, { recursive: true });
+  // OPTIMIZATION: Removed blocking existsSync check.
+  await mkdir(logDir, { recursive: true });
   const timestamp = new Date().toISOString();
   const entry = `[${timestamp}] ${line}\n`;
   try {

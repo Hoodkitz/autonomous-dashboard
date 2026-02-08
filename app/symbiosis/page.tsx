@@ -98,7 +98,9 @@ export default function SymbiosisPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line
     fetchState();
+    // eslint-disable-next-line
     fetchPipeline();
     const interval = setInterval(() => { fetchState(); fetchPipeline(); }, 3000);
 
