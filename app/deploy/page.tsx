@@ -85,6 +85,7 @@ export default function DeployPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line
     fetchState();
     const interval = setInterval(fetchState, 10000);
     return () => clearInterval(interval);

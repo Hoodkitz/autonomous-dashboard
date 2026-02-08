@@ -21,36 +21,9 @@ export default function TelegramPage() {
   const [polling, setPolling] = useState(false);
   const [pollCount, setPollCount] = useState(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [step, setStep] = useState(0); // setup wizard step
-
-  const fetchState = useCallback(async () => {
-    try {
-      const res = await fetch("/api/telegram");
-      if (res.ok) {
-        const data = await res.json();
-        setTg(data);
-        if (data.pollingActive && !pollRef.current) startPolling();
-      }
-    } catch { /* */ }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    fetchState();
-    const iv = setInterval(fetchState, 8000);
-    return () => {
-      clearInterval(iv);
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, [fetchState]);
-
-  // Auto-detect the current setup step
-  useEffect(() => {
-    if (!tg) return;
-    if (!tg.hasBotToken) setStep(0);
-    else if (!tg.chatId) setStep(1);
-    else if (!tg.active) setStep(2);
-    else setStep(3); // All set
-  }, [tg]);
+  const fetchStateRef = useRef<() => Promise<void>>(async () => {});
+  // Derived state for step
+  const step = !tg ? 0 : !tg.hasBotToken ? 0 : !tg.chatId ? 1 : !tg.active ? 2 : 3;
 
   function startPolling() {
     if (pollRef.current) return;
@@ -65,11 +38,36 @@ export default function TelegramPage() {
         const data = await res.json();
         if (data.messages > 0) {
           setPollCount((c) => c + data.messages);
-          fetchState(); // Refresh state to show new commands
+          fetchStateRef.current(); // Refresh state to show new commands
         }
       } catch { /* */ }
     }, 3000);
   }
+
+  const fetchState = useCallback(async () => {
+    try {
+      const res = await fetch("/api/telegram");
+      if (res.ok) {
+        const data = await res.json();
+        setTg(data);
+        if (data.pollingActive && !pollRef.current) startPolling();
+      }
+    } catch { /* */ }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    fetchStateRef.current = fetchState;
+  }, [fetchState]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetchState();
+    const iv = setInterval(fetchState, 8000);
+    return () => {
+      clearInterval(iv);
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [fetchState]);
 
   function stopPolling() {
     if (pollRef.current) {

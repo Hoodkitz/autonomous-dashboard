@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
       try {
         await updateEngineState({ status: "in_progress", phase: "evolving", executorTier: agent });
 
-        let targetFile = filePath;
+        const targetFile = filePath;
         let fileContent = "";
 
         if (target === "self") {
