@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -16,20 +16,27 @@ export async function POST(req: NextRequest) {
   const body = (await req.json().catch(() => ({}))) as BrowserTask;
 
   if (!body.action) {
-    return Response.json({ error: "action required" }, { status: 400 });
+    return NextResponse.json({ error: "action required" }, { status: 400 });
   }
 
+  // Dynamic import to avoid build-time issues
+  let playwright;
   try {
-    // Dynamic import to avoid build-time issues
-    const { chromium } = await import("playwright");
-    const browser = await chromium.launch({ headless: true });
-    const page = await browser.newPage();
+    playwright = await import("playwright");
+  } catch (err) {
+    return NextResponse.json({ error: "Playwright not found", details: String(err) }, { status: 500 });
+  }
 
+  const { chromium } = playwright;
+  const browser = await chromium.launch({ headless: true });
+  const page = await browser.newPage();
+
+  try {
     let result: Record<string, unknown> = {};
 
     switch (body.action) {
       case "navigate": {
-        if (!body.url) return Response.json({ error: "url required" }, { status: 400 });
+        if (!body.url) return NextResponse.json({ error: "url required" }, { status: 400 });
         await page.goto(body.url, { waitUntil: "domcontentloaded", timeout: 15000 });
         const title = await page.title();
         result = { ok: true, title, url: page.url() };
@@ -37,12 +44,12 @@ export async function POST(req: NextRequest) {
       }
 
       case "screenshot": {
-        if (!body.url) return Response.json({ error: "url required" }, { status: 400 });
+        if (!body.url) return NextResponse.json({ error: "url required" }, { status: 400 });
         await page.goto(body.url, { waitUntil: "domcontentloaded", timeout: 15000 });
         const screenshot = await page.screenshot({ type: "png", fullPage: false });
         const title = await page.title();
         await browser.close();
-        return new Response(screenshot, {
+        return new NextResponse(screenshot as unknown as BodyInit, {
           headers: {
             "Content-Type": "image/png",
             "X-Page-Title": encodeURIComponent(title),
@@ -51,7 +58,7 @@ export async function POST(req: NextRequest) {
       }
 
       case "click": {
-        if (!body.url || !body.selector) return Response.json({ error: "url and selector required" }, { status: 400 });
+        if (!body.url || !body.selector) return NextResponse.json({ error: "url and selector required" }, { status: 400 });
         await page.goto(body.url, { waitUntil: "domcontentloaded", timeout: 15000 });
         await page.click(body.selector, { timeout: 5000 });
         result = { ok: true, clicked: body.selector };
@@ -59,7 +66,7 @@ export async function POST(req: NextRequest) {
       }
 
       case "type": {
-        if (!body.url || !body.selector || !body.text) return Response.json({ error: "url, selector, text required" }, { status: 400 });
+        if (!body.url || !body.selector || !body.text) return NextResponse.json({ error: "url, selector, text required" }, { status: 400 });
         await page.goto(body.url, { waitUntil: "domcontentloaded", timeout: 15000 });
         await page.fill(body.selector, body.text, { timeout: 5000 });
         result = { ok: true, filled: body.selector, text: body.text };
@@ -67,7 +74,7 @@ export async function POST(req: NextRequest) {
       }
 
       case "extract": {
-        if (!body.url) return Response.json({ error: "url required" }, { status: 400 });
+        if (!body.url) return NextResponse.json({ error: "url required" }, { status: 400 });
         await page.goto(body.url, { waitUntil: "domcontentloaded", timeout: 15000 });
 
         const title = await page.title();
@@ -77,20 +84,20 @@ export async function POST(req: NextRequest) {
           text: el.textContent?.trim().slice(0, 80),
           href: el.getAttribute("href"),
         })));
-        const text = await page.$eval("body", (el) => el.innerText?.slice(0, 3000)).catch(() => "");
+        const text = await page.$eval("body", (el) => (el as HTMLElement).innerText?.slice(0, 3000)).catch(() => "");
 
         result = { ok: true, title, description: metaDesc, h1, links, text_preview: text?.slice(0, 1000) };
         break;
       }
 
       case "full_task": {
-        if (!body.url || !body.task) return Response.json({ error: "url and task required" }, { status: 400 });
+        if (!body.url || !body.task) return NextResponse.json({ error: "url and task required" }, { status: 400 });
         await page.goto(body.url, { waitUntil: "domcontentloaded", timeout: 15000 });
 
         // Get page accessibility snapshot for AI analysis
         const title = await page.title();
-        const snapshot = await page.accessibility.snapshot();
-        const text = await page.$eval("body", (el) => el.innerText?.slice(0, 5000)).catch(() => "");
+        const snapshot = await (page as any).accessibility.snapshot();
+        const text = await page.$eval("body", (el) => (el as HTMLElement).innerText?.slice(0, 5000)).catch(() => "");
 
         result = {
           ok: true,
@@ -106,9 +113,9 @@ export async function POST(req: NextRequest) {
     }
 
     await browser.close();
-    return Response.json(result);
+    return NextResponse.json(result);
   } catch (err) {
-    return Response.json({
+    return NextResponse.json({
       error: err instanceof Error ? err.message : String(err),
       hint: "Ensure Playwright browsers are installed: npx playwright install chromium",
     }, { status: 500 });
@@ -125,7 +132,7 @@ export async function GET() {
     playwrightReady = true;
   } catch { /* not installed */ }
 
-  return Response.json({
+  return NextResponse.json({
     capabilities: {
       playwright: {
         available: playwrightReady,
