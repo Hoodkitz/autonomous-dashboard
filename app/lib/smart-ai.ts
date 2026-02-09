@@ -5,6 +5,8 @@
  * Falls back to direct OpenRouter call if smart router is unavailable.
  */
 
+import { smartRouterChat } from "./smart-router-core";
+
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY || "";
 
 // Free models in priority order for direct fallback
@@ -24,33 +26,23 @@ export async function smartAI(
 ): Promise<{ content: string; tokens: number; model: string }> {
   const { maxTokens = 4000, temperature = 0.7 } = options || {};
 
-  // Try smart router first (internal API call)
+  // Try smart router first (direct function call)
   try {
-    const port = process.env.PORT || 3000;
-    const res = await fetch(`http://localhost:${port}/api/smart-router`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "chat",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        max_tokens: maxTokens,
-        temperature,
-      }),
-    });
+    const data = await smartRouterChat(
+      [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      { maxTokens, temperature }
+    );
 
-    if (res.ok) {
-      const data = await res.json();
-      return {
-        content: data.content || "",
-        tokens: data.tokens || 0,
-        model: data.model || "smart-router",
-      };
-    }
+    return {
+      content: data.content || "",
+      tokens: data.tokens || 0,
+      model: data.model || "smart-router",
+    };
   } catch {
-    // Smart router unavailable, fall through to direct
+    // Smart router unavailable, fall through to direct fallback
   }
 
   // Direct fallback: try each model until one works

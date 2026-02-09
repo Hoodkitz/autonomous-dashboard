@@ -3,6 +3,7 @@ import { readFile, writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const HOME = process.env.USERPROFILE || process.env.HOME || "~";
