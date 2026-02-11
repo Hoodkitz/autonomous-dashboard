@@ -4,6 +4,8 @@ import { appendLog, updateEngineState } from "@/app/lib/engine";
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { join } from "path";
 
+export const runtime = 'nodejs';
+
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
@@ -30,7 +32,7 @@ export async function POST(req: NextRequest) {
       try {
         await updateEngineState({ status: "in_progress", phase: "evolving", executorTier: agent });
 
-        let targetFile = filePath;
+        const targetFile = filePath;
         let fileContent = "";
 
         if (target === "self") {

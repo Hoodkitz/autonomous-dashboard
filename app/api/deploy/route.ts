@@ -358,6 +358,8 @@ Make it production-ready. Return ONLY the complete page.tsx code.`,
           const layout = `import type { Metadata } from "next";
 import "./globals.css";
 
+export const runtime = 'nodejs';
+
 export const metadata: Metadata = {
   title: "${project.name}",
   description: "Built by Autonomous Symbiotic Engine",

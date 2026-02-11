@@ -3,6 +3,8 @@ import { writeFile, unlink } from "fs/promises";
 import { join } from "path";
 import { homedir } from "os";
 
+export const runtime = 'nodejs';
+
 export const dynamic = "force-dynamic";
 
 const HOME = process.env.USERPROFILE || homedir();
