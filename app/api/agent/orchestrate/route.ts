@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { spawn } from "child_process";
 import { appendLog, updateEngineState } from "@/app/lib/engine";
 
+export const runtime = 'nodejs';
+
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 

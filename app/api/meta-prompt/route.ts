@@ -1,6 +1,8 @@
 import { getMetaState, getMetaStats, recordOutcome, shouldEvolve, evolveTemplate, applyEvolution } from "@/app/lib/meta-prompt";
 import { NextRequest } from "next/server";
 
+export const runtime = 'nodejs';
+
 export const dynamic = "force-dynamic";
 
 export async function GET() {

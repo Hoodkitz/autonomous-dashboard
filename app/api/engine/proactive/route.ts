@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { getApiKey, chatCompletion } from "@/app/lib/openrouter";
 import { getVault, getEngineState, getOpportunities, appendLog, writeJson } from "@/app/lib/engine";
 
+export const runtime = 'nodejs';
+
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 

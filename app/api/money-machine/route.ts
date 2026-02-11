@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { readFile, writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 
+export const runtime = 'nodejs';
+
 export const dynamic = "force-dynamic";
 export const maxDuration = 300; // 5 minutes
 
@@ -392,6 +394,8 @@ Start with "use client"; and export default function LandingPage().`;
         // Layout
         await writeFile(join(deployDir, "app", "layout.tsx"), `import type { Metadata } from "next";
 import "./globals.css";
+
+export const runtime = 'nodejs';
 
 export const metadata: Metadata = {
   title: "${researchData.name} - ${researchData.tagline}",
