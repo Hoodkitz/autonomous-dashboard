@@ -3,6 +3,7 @@ import { planExecution, executeStep, selfOptimize, CAPABILITIES, type StepResult
 import { appendLog, updateEngineState } from "@/app/lib/engine";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 export const maxDuration = 300;
 
 interface OrchestratorRequest {
