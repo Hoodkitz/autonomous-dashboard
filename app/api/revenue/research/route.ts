@@ -3,6 +3,7 @@ import { getApiKey, chatCompletion } from "@/app/lib/openrouter";
 import { appendLog, writeJson, getOpportunities, getVault } from "@/app/lib/engine";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 export const maxDuration = 120;
 
 const RESEARCH_PROMPT = `You are an autonomous AI revenue research engine. Your job is to find CONCRETE ways to make money using AI agents, automation, and SaaS tools.
