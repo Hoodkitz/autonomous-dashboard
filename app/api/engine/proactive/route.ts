@@ -184,3 +184,5 @@ export async function GET() {
     return Response.json({ actions: [], timestamp: null });
   }
 }
+
+export const runtime = "nodejs";

@@ -115,3 +115,5 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: msg }, { status: 500 });
   }
 }
+
+export const runtime = "nodejs";

@@ -61,3 +61,5 @@ export default async function VaultPage() {
     </div>
   );
 }
+
+export const runtime = "nodejs";

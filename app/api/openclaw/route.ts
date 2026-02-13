@@ -223,3 +223,5 @@ export async function POST(req: NextRequest) {
     }, { status: 503 });
   }
 }
+
+export const runtime = "nodejs";
