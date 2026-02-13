@@ -333,3 +333,5 @@ Return JSON array of 3 revolutions, each with: name, shift, newCategory, firstPr
     headers: { "Content-Type": "application/x-ndjson", "Cache-Control": "no-cache" },
   });
 }
+
+export const runtime = "nodejs";

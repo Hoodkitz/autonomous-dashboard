@@ -184,3 +184,5 @@ export async function POST(req: NextRequest) {
   await saveBoard(board);
   return Response.json({ ok: true, board });
 }
+
+export const runtime = "nodejs";

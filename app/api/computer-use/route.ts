@@ -148,3 +148,5 @@ export async function GET() {
     setup_command: "npx playwright install chromium",
   });
 }
+
+export const runtime = "nodejs";
