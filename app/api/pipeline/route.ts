@@ -1,3 +1,4 @@
+export const runtime = 'nodejs';
 import { NextRequest } from "next/server";
 import { runPipeline, resumePipeline, loadLatestState, DEFAULT_CONFIG } from "@/app/lib/autonomous-pipeline";
 
