@@ -1,3 +1,4 @@
+export const runtime = 'nodejs';
 import { NextRequest } from "next/server";
 import { getEngineState, updateEngineState, appendLog } from "@/app/lib/engine";
 

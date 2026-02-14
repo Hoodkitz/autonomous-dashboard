@@ -1,3 +1,4 @@
+export const runtime = 'nodejs';
 import { getEngineState, appendLog, updateEngineState } from "@/app/lib/engine";
 import { loadLatestState } from "@/app/lib/autonomous-pipeline";
 
