@@ -1,4 +1,3 @@
-export const runtime = 'nodejs';
 import { NextRequest } from "next/server";
 import { readFile, writeFile, mkdir } from "fs/promises";
 import { join } from "path";
@@ -334,3 +333,5 @@ Return JSON array of 3 revolutions, each with: name, shift, newCategory, firstPr
     headers: { "Content-Type": "application/x-ndjson", "Cache-Control": "no-cache" },
   });
 }
+
+export const runtime = 'nodejs';

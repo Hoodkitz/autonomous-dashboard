@@ -1,4 +1,3 @@
-export const runtime = 'nodejs';
 import { NextResponse } from "next/server";
 import { getOpportunities, getRevenueTracker } from "@/app/lib/engine";
 
@@ -11,3 +10,5 @@ export async function GET() {
   ]);
   return NextResponse.json({ opportunities, tracker });
 }
+
+export const runtime = 'nodejs';

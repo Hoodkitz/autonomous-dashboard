@@ -1,4 +1,3 @@
-export const runtime = 'nodejs';
 import { NextRequest } from "next/server";
 import { readFile, writeFile, mkdir } from "fs/promises";
 import { join } from "path";
@@ -365,3 +364,5 @@ function parseDiscoveries(raw: string, category: Discovery["category"]): Discove
     return [];
   }
 }
+
+export const runtime = 'nodejs';

@@ -1,4 +1,3 @@
-export const runtime = 'nodejs';
 import { NextRequest } from "next/server";
 import { readFile, writeFile, mkdir } from "fs/promises";
 import { join } from "path";
@@ -533,3 +532,5 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     headers: { "Content-Type": "application/x-ndjson", "Cache-Control": "no-cache" },
   });
 }
+
+export const runtime = 'nodejs';

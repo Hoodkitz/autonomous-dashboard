@@ -1,4 +1,3 @@
-export const runtime = 'nodejs';
 import { NextRequest } from "next/server";
 import { getEngineState, updateEngineState, appendLog } from "@/app/lib/engine";
 
@@ -120,3 +119,5 @@ export async function POST(req: NextRequest) {
       return Response.json({ error: `Unknown action: ${action}` }, { status: 400 });
   }
 }
+
+export const runtime = 'nodejs';

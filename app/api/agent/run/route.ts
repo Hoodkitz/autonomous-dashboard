@@ -1,4 +1,3 @@
-export const runtime = 'nodejs';
 import { NextRequest } from "next/server";
 import { spawn } from "child_process";
 import { appendLog, updateEngineState } from "@/app/lib/engine";
@@ -147,3 +146,5 @@ export async function POST(req: NextRequest) {
     },
   });
 }
+
+export const runtime = 'nodejs';

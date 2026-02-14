@@ -1,4 +1,3 @@
-export const runtime = 'nodejs';
 import { NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -148,3 +147,5 @@ export async function GET() {
     setup_command: "npx playwright install chromium",
   });
 }
+
+export const runtime = 'nodejs';

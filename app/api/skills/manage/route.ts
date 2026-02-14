@@ -1,4 +1,3 @@
-export const runtime = 'nodejs';
 import { NextRequest } from "next/server";
 import { readdir, readFile } from "fs/promises";
 import { join } from "path";
@@ -171,3 +170,5 @@ export async function POST(req: NextRequest) {
 
   return Response.json({ error: "Unknown action. Use: search, install" }, { status: 400 });
 }
+
+export const runtime = 'nodejs';

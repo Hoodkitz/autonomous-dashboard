@@ -1,4 +1,3 @@
-export const runtime = 'nodejs';
 import { getEngineState, appendLog, updateEngineState } from "@/app/lib/engine";
 import { loadLatestState } from "@/app/lib/autonomous-pipeline";
 
@@ -102,3 +101,5 @@ export async function GET() {
     return Response.json({ error: err instanceof Error ? err.message : String(err) });
   }
 }
+
+export const runtime = 'nodejs';

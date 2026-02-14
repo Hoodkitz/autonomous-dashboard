@@ -1,4 +1,3 @@
-export const runtime = 'nodejs';
 import { NextRequest } from "next/server";
 import { runPipeline, resumePipeline, loadLatestState, DEFAULT_CONFIG } from "@/app/lib/autonomous-pipeline";
 
@@ -108,3 +107,5 @@ export async function POST(req: NextRequest) {
     headers: { "Content-Type": "application/x-ndjson", "Transfer-Encoding": "chunked" },
   });
 }
+
+export const runtime = 'nodejs';

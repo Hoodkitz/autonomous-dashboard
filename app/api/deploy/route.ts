@@ -1,4 +1,3 @@
-export const runtime = 'nodejs';
 import { NextRequest } from "next/server";
 import { readFile, writeFile, mkdir, readdir, stat } from "fs/promises";
 import { join } from "path";
@@ -444,3 +443,5 @@ What should we deploy next? Give 3 specific recommendations with reasoning. Retu
 
   return Response.json({ error: "Unknown action. Use: scan, prepare, configure_platform, toggle_auto_deploy, update_status, advise" }, { status: 400 });
 }
+
+export const runtime = 'nodejs';

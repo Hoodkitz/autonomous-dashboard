@@ -1,4 +1,3 @@
-export const runtime = 'nodejs';
 import { NextRequest } from "next/server";
 import { getApiKey, chatCompletion } from "@/app/lib/openrouter";
 import { appendLog, writeJson, getOpportunities, getVault } from "@/app/lib/engine";
@@ -199,3 +198,5 @@ Research deeply. Think beyond the obvious. Find opportunities others haven't see
     },
   });
 }
+
+export const runtime = 'nodejs';

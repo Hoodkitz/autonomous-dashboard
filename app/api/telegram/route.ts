@@ -1,4 +1,3 @@
-export const runtime = 'nodejs';
 import { NextRequest } from "next/server";
 import { readFile, writeFile, mkdir } from "fs/promises";
 import { join } from "path";
@@ -590,3 +589,5 @@ export async function POST(req: NextRequest) {
 
   return Response.json({ ok: true });
 }
+
+export const runtime = 'nodejs';

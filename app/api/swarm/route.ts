@@ -1,4 +1,3 @@
-export const runtime = 'nodejs';
 import { NextRequest } from "next/server";
 import { readFile, writeFile, mkdir, readdir } from "fs/promises";
 import { join } from "path";
@@ -644,3 +643,5 @@ export async function POST(req: NextRequest) {
 
   return Response.json({ error: "Unknown action. Use: swarm, run_agent, stop, evolve, add_agent" }, { status: 400 });
 }
+
+export const runtime = 'nodejs';

@@ -1,4 +1,3 @@
-export const runtime = 'nodejs';
 import { existsSync } from "fs";
 import { writeFile, unlink } from "fs/promises";
 import { join } from "path";
@@ -40,3 +39,5 @@ export async function POST(req: Request) {
 
   return Response.json({ error: "action must be 'start' or 'stop'" }, { status: 400 });
 }
+
+export const runtime = 'nodejs';

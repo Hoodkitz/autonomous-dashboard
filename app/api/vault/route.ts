@@ -1,4 +1,3 @@
-export const runtime = 'nodejs';
 import { NextResponse } from "next/server";
 import { getVault } from "@/app/lib/engine";
 
@@ -18,3 +17,5 @@ export async function GET() {
     free_tier_services: vault.free_tier_services,
   });
 }
+
+export const runtime = 'nodejs';

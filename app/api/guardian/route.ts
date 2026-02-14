@@ -1,4 +1,3 @@
-export const runtime = 'nodejs';
 import { NextRequest } from "next/server";
 import { readFile, writeFile, mkdir, stat } from "fs/promises";
 import { join } from "path";
@@ -467,3 +466,5 @@ Analyze this system. What needs attention? What should be improved? What's worki
     headers: { "Content-Type": "application/x-ndjson", "Cache-Control": "no-cache" },
   });
 }
+
+export const runtime = 'nodejs';

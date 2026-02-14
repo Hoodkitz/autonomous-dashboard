@@ -1,4 +1,3 @@
-export const runtime = 'nodejs';
 import { NextRequest } from "next/server";
 import { readFile, writeFile, mkdir } from "fs/promises";
 import { join } from "path";
@@ -430,3 +429,5 @@ export async function POST(req: NextRequest) {
 
   return Response.json({ error: "Unknown action. Use: chat, switch, check_credits, reset, toggle_never_stop, set_threshold" }, { status: 400 });
 }
+
+export const runtime = 'nodejs';

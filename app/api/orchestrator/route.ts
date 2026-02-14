@@ -1,4 +1,3 @@
-export const runtime = 'nodejs';
 import { NextRequest } from "next/server";
 import { planExecution, executeStep, selfOptimize, CAPABILITIES, type StepResult } from "@/app/lib/orchestrator";
 import { appendLog, updateEngineState } from "@/app/lib/engine";
@@ -167,3 +166,5 @@ export async function GET() {
     },
   });
 }
+
+export const runtime = 'nodejs';
