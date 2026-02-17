@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { readFile, writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { smartAI } from "@/app/lib/smart-ai";
+export const runtime = 'nodejs';
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
