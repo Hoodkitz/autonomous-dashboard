@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 
+export const runtime = 'nodejs';
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
         const screenshot = await page.screenshot({ type: "png", fullPage: false });
         const title = await page.title();
         await browser.close();
-        return new Response(screenshot, {
+        return new Response(screenshot as unknown as BodyInit, {
           headers: {
             "Content-Type": "image/png",
             "X-Page-Title": encodeURIComponent(title),
@@ -89,7 +90,7 @@ export async function POST(req: NextRequest) {
 
         // Get page accessibility snapshot for AI analysis
         const title = await page.title();
-        const snapshot = await page.accessibility.snapshot();
+        const snapshot = await (page as any).accessibility.snapshot();
         const text = await page.$eval("body", (el) => el.innerText?.slice(0, 5000)).catch(() => "");
 
         result = {
