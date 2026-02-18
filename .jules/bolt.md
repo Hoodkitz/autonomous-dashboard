@@ -1,0 +1,3 @@
+## 2024-05-23 - Synchronous FS Operations in High-Frequency Paths
+**Learning:** The application architecture relies heavily on `app/lib/engine.ts` for state management, which is polled frequently (every 3s) by the dashboard. The original implementation used synchronous `existsSync` checks before async `readFile` operations. This blocks the event loop unnecessarily.
+**Action:** Replaced `existsSync` + `readFile` with `try/catch` around `readFile` to handle `ENOENT`. Introduced a module-level `knownDirs` Set cache to avoid redundant `mkdir` syscalls on write operations. This pattern should be applied to any future high-frequency file I/O utilities in this codebase.
