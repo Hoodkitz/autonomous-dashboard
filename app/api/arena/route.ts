@@ -5,6 +5,7 @@ import { smartAI } from "@/app/lib/smart-ai";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
+export const runtime = "nodejs";
 
 const HOME = process.env.USERPROFILE || process.env.HOME || "~";
 const ENGINE_DIR = join(HOME, ".autonomous-engine");
@@ -332,7 +333,7 @@ ${otherProjects.length > 0 ? otherProjects.join("\n") : "None yet — you're fir
 
 ${prevAdvice ? `Advice from other gladiators:\n${prevAdvice}` : ""}
 
-${gladiator.project && gladiator.round > 0 ? `OPTIMIZE: Your project exists. Find ways to INCREASE revenue. Consider:
+${gladiator.project && gladiator.rounds > 0 ? `OPTIMIZE: Your project exists. Find ways to INCREASE revenue. Consider:
 - New features worth paying for
 - Better pricing strategy
 - Marketing channels
