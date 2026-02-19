@@ -3,6 +3,8 @@ import { readdir, readFile } from "fs/promises";
 import { join } from "path";
 import { exec } from "child_process";
 
+
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const HOME = process.env.USERPROFILE || process.env.HOME || "~";
