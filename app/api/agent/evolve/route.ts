@@ -4,6 +4,8 @@ import { appendLog, updateEngineState } from "@/app/lib/engine";
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { join } from "path";
 
+
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 

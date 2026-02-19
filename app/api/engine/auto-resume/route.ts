@@ -1,6 +1,8 @@
 import { getEngineState, appendLog, updateEngineState } from "@/app/lib/engine";
 import { loadLatestState } from "@/app/lib/autonomous-pipeline";
 
+
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // POST: Auto-resume check - called on dashboard startup

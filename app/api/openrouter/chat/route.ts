@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { getApiKey, chatCompletion, type ChatMessage } from "@/app/lib/openrouter";
 import { appendLog } from "@/app/lib/engine";
 
+
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 

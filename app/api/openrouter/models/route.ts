@@ -1,5 +1,7 @@
 import { listModels } from "@/app/lib/openrouter";
 
+
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {

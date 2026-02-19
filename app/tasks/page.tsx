@@ -2,6 +2,8 @@ import { readdirSync, readFileSync, existsSync } from "fs";
 import { join } from "path";
 import { getEngineState } from "../lib/engine";
 
+
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 interface Story {
