@@ -63,8 +63,10 @@ async function readJson<T>(relPath: string, fallback: T): Promise<T> {
     // Optimization: Removed blocking existsSync check. Rely on try/catch.
     const data = await readFile(full, "utf-8");
     return JSON.parse(data) as T;
-  } catch {
-    return fallback;
+  } catch (error) {
+    // Only swallow ENOENT (file not found). Rethrow syntax errors (invalid JSON).
+    if ((error as { code?: string }).code === 'ENOENT') return fallback;
+    throw error;
   }
 }
 
