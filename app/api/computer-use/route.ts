@@ -89,6 +89,7 @@ export async function POST(req: NextRequest) {
 
         // Get page accessibility snapshot for AI analysis
         const title = await page.title();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const snapshot = await (page as any).accessibility.snapshot();
         const text = await page.$eval("body", (el) => el.innerText?.slice(0, 5000)).catch(() => "");
 

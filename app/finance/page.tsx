@@ -62,6 +62,7 @@ export default function FinancePage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchLedger();
     const iv = setInterval(fetchLedger, 10000);
     return () => clearInterval(iv);
