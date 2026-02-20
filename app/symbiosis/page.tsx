@@ -98,6 +98,7 @@ export default function SymbiosisPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchState();
     fetchPipeline();
     const interval = setInterval(() => { fetchState(); fetchPipeline(); }, 3000);

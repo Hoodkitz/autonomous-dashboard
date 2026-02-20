@@ -29,28 +29,10 @@ export default function TelegramPage() {
       if (res.ok) {
         const data = await res.json();
         setTg(data);
-        if (data.pollingActive && !pollRef.current) startPolling();
+        // Polling auto-start handled by useEffect
       }
     } catch { /* */ }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    fetchState();
-    const iv = setInterval(fetchState, 8000);
-    return () => {
-      clearInterval(iv);
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, [fetchState]);
-
-  // Auto-detect the current setup step
-  useEffect(() => {
-    if (!tg) return;
-    if (!tg.hasBotToken) setStep(0);
-    else if (!tg.chatId) setStep(1);
-    else if (!tg.active) setStep(2);
-    else setStep(3); // All set
-  }, [tg]);
+  }, []);
 
   function startPolling() {
     if (pollRef.current) return;
@@ -78,6 +60,29 @@ export default function TelegramPage() {
     }
     setPolling(false);
   }
+
+  useEffect(() => {
+    fetchState();
+    const iv = setInterval(fetchState, 8000);
+    return () => {
+      clearInterval(iv);
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [fetchState]);
+
+  // Auto-detect the current setup step & auto-start polling
+  useEffect(() => {
+    if (!tg) return;
+    if (!tg.hasBotToken) setStep(0);
+    else if (!tg.chatId) setStep(1);
+    else if (!tg.active) setStep(2);
+    else setStep(3); // All set
+
+    if (tg.pollingActive && !pollRef.current) {
+        startPolling();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tg]);
 
   async function togglePolling() {
     await fetch("/api/telegram", {
