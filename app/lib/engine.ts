@@ -1,6 +1,6 @@
-import { readFile, writeFile, appendFile, mkdir } from "fs/promises";
-import { join, dirname } from "path";
-import { homedir } from "os";
+import { readFile, writeFile, appendFile, mkdir } from "node:fs/promises";
+import { join, dirname } from "node:path";
+import { homedir } from "node:os";
 
 const HOME = process.env.USERPROFILE || homedir();
 const ENGINE_DIR = join(HOME, ".autonomous-engine");
