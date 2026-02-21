@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { spawn } from "child_process";
+import { spawn } from "node:child_process";
 import { appendLog, updateEngineState } from "@/app/lib/engine";
 
 export const dynamic = "force-dynamic";
@@ -102,3 +102,5 @@ export async function POST(req: NextRequest) {
     },
   });
 }
+
+export const runtime = 'nodejs';

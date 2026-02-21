@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
-import { readFile, writeFile, mkdir } from "fs/promises";
-import { join } from "path";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { join } from "node:path";
 
 export const dynamic = "force-dynamic";
 
@@ -429,3 +429,5 @@ export async function POST(req: NextRequest) {
 
   return Response.json({ error: "Unknown action. Use: chat, switch, check_credits, reset, toggle_never_stop, set_threshold" }, { status: 400 });
 }
+
+export const runtime = 'nodejs';

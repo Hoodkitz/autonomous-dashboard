@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
-import { readdir, readFile } from "fs/promises";
-import { join } from "path";
-import { exec } from "child_process";
+import { readdir, readFile } from "node:fs/promises";
+import { join } from "node:path";
+import { exec } from "node:child_process";
 
 export const dynamic = "force-dynamic";
 
@@ -170,3 +170,5 @@ export async function POST(req: NextRequest) {
 
   return Response.json({ error: "Unknown action. Use: search, install" }, { status: 400 });
 }
+
+export const runtime = 'nodejs';

@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
-import { readFile, writeFile, mkdir } from "fs/promises";
-import { join } from "path";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { join } from "node:path";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -589,3 +589,5 @@ export async function POST(req: NextRequest) {
 
   return Response.json({ ok: true });
 }
+
+export const runtime = 'nodejs';

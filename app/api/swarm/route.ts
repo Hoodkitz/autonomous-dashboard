@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
-import { readFile, writeFile, mkdir, readdir } from "fs/promises";
-import { join } from "path";
+import { readFile, writeFile, mkdir, readdir } from "node:fs/promises";
+import { join } from "node:path";
 import { smartAI } from "@/app/lib/smart-ai";
 
 export const dynamic = "force-dynamic";
@@ -643,3 +643,5 @@ export async function POST(req: NextRequest) {
 
   return Response.json({ error: "Unknown action. Use: swarm, run_agent, stop, evolve, add_agent" }, { status: 400 });
 }
+
+export const runtime = 'nodejs';

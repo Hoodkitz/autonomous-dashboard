@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
-import { readFile, writeFile, mkdir, readdir, stat } from "fs/promises";
-import { join } from "path";
+import { readFile, writeFile, mkdir, readdir, stat } from "node:fs/promises";
+import { join } from "node:path";
 import { smartAI } from "@/app/lib/smart-ai";
 
 export const dynamic = "force-dynamic";
@@ -443,3 +443,5 @@ What should we deploy next? Give 3 specific recommendations with reasoning. Retu
 
   return Response.json({ error: "Unknown action. Use: scan, prepare, configure_platform, toggle_auto_deploy, update_status, advise" }, { status: 400 });
 }
+
+export const runtime = 'nodejs';

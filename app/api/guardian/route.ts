@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
-import { readFile, writeFile, mkdir, stat } from "fs/promises";
-import { join } from "path";
+import { readFile, writeFile, mkdir, stat } from "node:fs/promises";
+import { join } from "node:path";
 import { smartAI } from "@/app/lib/smart-ai";
 
 export const dynamic = "force-dynamic";
@@ -466,3 +466,5 @@ Analyze this system. What needs attention? What should be improved? What's worki
     headers: { "Content-Type": "application/x-ndjson", "Cache-Control": "no-cache" },
   });
 }
+
+export const runtime = 'nodejs';

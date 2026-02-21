@@ -11,10 +11,10 @@
  * and evolves prompt templates to extract maximum performance.
  */
 
-import { readFile, writeFile, mkdir } from "fs/promises";
-import { join, dirname } from "path";
-import { existsSync } from "fs";
-import { homedir } from "os";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { join, dirname } from "node:path";
+import { existsSync } from "node:fs";
+import { homedir } from "node:os";
 
 const HOME = process.env.USERPROFILE || homedir();
 const META_DIR = join(HOME, ".autonomous-engine", "meta-prompts");

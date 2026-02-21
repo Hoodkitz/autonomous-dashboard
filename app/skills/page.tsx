@@ -1,5 +1,5 @@
-import { readdirSync, readFileSync, existsSync } from "fs";
-import { join } from "path";
+import { readdirSync, readFileSync, existsSync } from "node:fs";
+import { join } from "node:path";
 
 export const dynamic = "force-dynamic";
 

@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
-import { readFile, writeFile, mkdir } from "fs/promises";
-import { join } from "path";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { join } from "node:path";
 import { smartAI } from "@/app/lib/smart-ai";
 
 export const dynamic = "force-dynamic";
@@ -332,7 +332,7 @@ ${otherProjects.length > 0 ? otherProjects.join("\n") : "None yet — you're fir
 
 ${prevAdvice ? `Advice from other gladiators:\n${prevAdvice}` : ""}
 
-${gladiator.project && gladiator.round > 0 ? `OPTIMIZE: Your project exists. Find ways to INCREASE revenue. Consider:
+${gladiator.project && gladiator.rounds > 0 ? `OPTIMIZE: Your project exists. Find ways to INCREASE revenue. Consider:
 - New features worth paying for
 - Better pricing strategy
 - Marketing channels
@@ -596,3 +596,5 @@ Return JSON: { advice: "<2-3 sentences of actionable advice>", rating: <1-10 how
 
   return Response.json({ error: "Unknown action. Use: battle, stop, payout, add_gladiator" }, { status: 400 });
 }
+
+export const runtime = 'nodejs';

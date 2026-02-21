@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
         const screenshot = await page.screenshot({ type: "png", fullPage: false });
         const title = await page.title();
         await browser.close();
-        return new Response(screenshot, {
+        return new Response(screenshot as unknown as BodyInit, {
           headers: {
             "Content-Type": "image/png",
             "X-Page-Title": encodeURIComponent(title),
@@ -89,8 +89,8 @@ export async function POST(req: NextRequest) {
 
         // Get page accessibility snapshot for AI analysis
         const title = await page.title();
-        const snapshot = await page.accessibility.snapshot();
-        const text = await page.$eval("body", (el) => el.innerText?.slice(0, 5000)).catch(() => "");
+        const snapshot = await (page as any).accessibility.snapshot();
+        const text = await page.$eval("body", (el) => (el as HTMLElement).innerText?.slice(0, 5000)).catch(() => "");
 
         result = {
           ok: true,
@@ -147,3 +147,5 @@ export async function GET() {
     setup_command: "npx playwright install chromium",
   });
 }
+
+export const runtime = 'nodejs';

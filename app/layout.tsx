@@ -18,6 +18,8 @@ export const metadata: Metadata = {
   description: "Control panel for the Autonomous Symbiotic Engine",
 };
 
+export const runtime = 'nodejs';
+
 export default function RootLayout({
   children,
 }: Readonly<{

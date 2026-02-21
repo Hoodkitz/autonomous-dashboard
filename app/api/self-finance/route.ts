@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
-import { readFile, writeFile, mkdir } from "fs/promises";
-import { join } from "path";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { join } from "node:path";
 
 export const dynamic = "force-dynamic";
 
@@ -215,3 +215,5 @@ export async function POST(req: NextRequest) {
   await saveLedger(ledger);
   return Response.json({ ok: true, ledger });
 }
+
+export const runtime = 'nodejs';

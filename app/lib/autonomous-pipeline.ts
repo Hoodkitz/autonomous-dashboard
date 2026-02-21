@@ -11,10 +11,10 @@
 import { runCliAgent, runOpenRouterModel, CAPABILITIES } from "./orchestrator";
 import { getApiKey, chatCompletion, type ChatMessage } from "./openrouter";
 import { appendLog, writeJson, getEngineState, updateEngineState } from "./engine";
-import { readFile, writeFile, mkdir } from "fs/promises";
-import { join } from "path";
-import { existsSync } from "fs";
-import { homedir } from "os";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { join } from "node:path";
+import { existsSync } from "node:fs";
+import { homedir } from "node:os";
 
 const HOME = process.env.USERPROFILE || homedir();
 const PIPELINE_DIR = join(HOME, ".autonomous-engine", "pipeline");
