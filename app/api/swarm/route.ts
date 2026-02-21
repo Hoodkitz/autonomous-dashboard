@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
-import { readFile, writeFile, mkdir, readdir } from "fs/promises";
-import { join } from "path";
+import { readFile, writeFile, mkdir, readdir } from "node:fs/promises";
+import { join } from "node:path";
 import { smartAI } from "@/app/lib/smart-ai";
 
 export const dynamic = "force-dynamic";

@@ -1,6 +1,6 @@
-import { readFile } from "fs/promises";
-import { join } from "path";
-import { homedir } from "os";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+import { homedir } from "node:os";
 
 const HOME = process.env.USERPROFILE || homedir();
 const VAULT_PATH = join(HOME, ".autonomous-engine", "vault", "keys.json");

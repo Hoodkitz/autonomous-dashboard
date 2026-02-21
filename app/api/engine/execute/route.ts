@@ -1,10 +1,10 @@
 import { NextRequest } from "next/server";
-import { spawn } from "child_process";
+import { spawn } from "node:child_process";
 import { appendLog, updateEngineState, getEngineState, writeJson } from "@/app/lib/engine";
 import { generatePrompt, recordOutcome, shouldEvolve, evolveTemplate, applyEvolution } from "@/app/lib/meta-prompt";
-import { readFileSync, existsSync } from "fs";
-import { join } from "path";
-import { homedir } from "os";
+import { readFileSync, existsSync } from "node:fs";
+import { join } from "node:path";
+import { homedir } from "node:os";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;

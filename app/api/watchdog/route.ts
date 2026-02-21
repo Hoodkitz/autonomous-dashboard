@@ -1,7 +1,7 @@
-import { existsSync } from "fs";
-import { writeFile, unlink } from "fs/promises";
-import { join } from "path";
-import { homedir } from "os";
+import { existsSync } from "node:fs";
+import { writeFile, unlink } from "node:fs/promises";
+import { join } from "node:path";
+import { homedir } from "node:os";
 
 export const dynamic = "force-dynamic";
 

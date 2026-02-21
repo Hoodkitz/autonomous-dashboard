@@ -1,8 +1,8 @@
 import { NextRequest } from "next/server";
-import { spawn } from "child_process";
+import { spawn } from "node:child_process";
 import { appendLog, updateEngineState } from "@/app/lib/engine";
-import { readFileSync, writeFileSync, existsSync } from "fs";
-import { join } from "path";
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { join } from "node:path";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;

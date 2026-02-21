@@ -1,4 +1,4 @@
-import { spawn } from "child_process";
+import { spawn } from "node:child_process";
 import { getApiKey, chatCompletion, type ChatMessage } from "./openrouter";
 import { appendLog, updateEngineState, getVault } from "./engine";
 
