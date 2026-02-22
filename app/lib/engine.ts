@@ -1,4 +1,3 @@
-import { readFile, writeFile, appendFile, mkdir } from "fs/promises";
 import { join, dirname } from "path";
 import { homedir } from "os";
 
@@ -58,6 +57,14 @@ export interface RevenueTracker {
 }
 
 export async function readJson<T>(relPath: string, fallback: T): Promise<T> {
+  let readFile;
+  try {
+    const fs = await import("fs/promises");
+    readFile = fs.readFile;
+  } catch {
+    return fallback;
+  }
+
   try {
     const full = join(ENGINE_DIR, relPath);
     // Optimized: Removed synchronous existsSync check. Relies on try/catch (EAFP).
@@ -69,6 +76,15 @@ export async function readJson<T>(relPath: string, fallback: T): Promise<T> {
 }
 
 export async function writeJson(relPath: string, data: unknown): Promise<void> {
+  let writeFile, mkdir;
+  try {
+    const fs = await import("fs/promises");
+    writeFile = fs.writeFile;
+    mkdir = fs.mkdir;
+  } catch {
+    return; // Client-side or fs unavailable
+  }
+
   const full = join(ENGINE_DIR, relPath);
   const dir = dirname(full);
 
@@ -123,6 +139,16 @@ export async function getRevenueTracker(): Promise<RevenueTracker> {
 }
 
 export async function appendLog(line: string): Promise<void> {
+  let writeFile, appendFile, mkdir;
+  try {
+    const fs = await import("fs/promises");
+    writeFile = fs.writeFile;
+    appendFile = fs.appendFile;
+    mkdir = fs.mkdir;
+  } catch {
+    return;
+  }
+
   const date = new Date().toISOString().split("T")[0];
   const logFile = join(ENGINE_DIR, "progress", `${date}.log`);
   const logDir = join(ENGINE_DIR, "progress");

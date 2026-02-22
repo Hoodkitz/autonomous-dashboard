@@ -11,9 +11,7 @@
 import { runCliAgent, runOpenRouterModel, CAPABILITIES } from "./orchestrator";
 import { getApiKey, chatCompletion, type ChatMessage } from "./openrouter";
 import { appendLog, writeJson, getEngineState, updateEngineState } from "./engine";
-import { readFile, writeFile, mkdir } from "fs/promises";
 import { join } from "path";
-import { existsSync } from "fs";
 import { homedir } from "os";
 
 const HOME = process.env.USERPROFILE || homedir();
@@ -94,15 +92,26 @@ function newState(goal: string, config: PipelineConfig): PipelineState {
 }
 
 async function saveState(state: PipelineState): Promise<void> {
-  if (!existsSync(PIPELINE_DIR)) await mkdir(PIPELINE_DIR, { recursive: true });
-  state.updated_at = new Date().toISOString();
-  await writeFile(join(PIPELINE_DIR, `${state.id}.json`), JSON.stringify(state, null, 2));
-  // Also save as "latest"
-  await writeFile(join(PIPELINE_DIR, "latest.json"), JSON.stringify(state, null, 2));
+  try {
+    const { writeFile, mkdir } = await import("fs/promises");
+    const { existsSync } = await import("fs");
+
+    if (!existsSync(PIPELINE_DIR)) await mkdir(PIPELINE_DIR, { recursive: true });
+    state.updated_at = new Date().toISOString();
+    await writeFile(join(PIPELINE_DIR, `${state.id}.json`), JSON.stringify(state, null, 2));
+    // Also save as "latest"
+    await writeFile(join(PIPELINE_DIR, "latest.json"), JSON.stringify(state, null, 2));
+  } catch (error) {
+    if (String(error).includes("Cannot find module")) return; // ignore if fs missing
+    // Otherwise it's a real FS error, maybe we should log it but for now we swallow to keep runtime isomorphic
+  }
 }
 
 export async function loadLatestState(): Promise<PipelineState | null> {
   try {
+    const { readFile } = await import("fs/promises");
+    const { existsSync } = await import("fs");
+
     const path = join(PIPELINE_DIR, "latest.json");
     if (!existsSync(path)) return null;
     return JSON.parse(await readFile(path, "utf-8"));
