@@ -5,6 +5,7 @@ import { readFileSync, writeFileSync, existsSync } from "fs";
 import { join } from "path";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 export const maxDuration = 300;
 
 const DASHBOARD_DIR = join(process.env.USERPROFILE || "C:\\Users\\Administrator", "autonomous-dashboard");
