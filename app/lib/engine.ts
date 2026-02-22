@@ -1,10 +1,11 @@
-import { readFile, writeFile, appendFile, mkdir } from "fs/promises";
 import { join, dirname } from "path";
-import { existsSync } from "fs";
 import { homedir } from "os";
 
 const HOME = process.env.USERPROFILE || homedir();
 const ENGINE_DIR = join(HOME, ".autonomous-engine");
+
+// Cache known directories to avoid redundant mkdir calls
+const knownDirs = new Set<string>();
 
 export interface EngineState {
   status: string;
@@ -55,10 +56,18 @@ export interface RevenueTracker {
   projects: Array<{ name: string; revenue: number; status: string }>;
 }
 
-async function readJson<T>(relPath: string, fallback: T): Promise<T> {
+export async function readJson<T>(relPath: string, fallback: T): Promise<T> {
+  let readFile;
+  try {
+    const fs = await import("fs/promises");
+    readFile = fs.readFile;
+  } catch {
+    return fallback;
+  }
+
   try {
     const full = join(ENGINE_DIR, relPath);
-    if (!existsSync(full)) return fallback;
+    // Optimized: Removed synchronous existsSync check. Relies on try/catch (EAFP).
     const data = await readFile(full, "utf-8");
     return JSON.parse(data) as T;
   } catch {
@@ -67,10 +76,36 @@ async function readJson<T>(relPath: string, fallback: T): Promise<T> {
 }
 
 export async function writeJson(relPath: string, data: unknown): Promise<void> {
+  let writeFile, mkdir;
+  try {
+    const fs = await import("fs/promises");
+    writeFile = fs.writeFile;
+    mkdir = fs.mkdir;
+  } catch {
+    return; // Client-side or fs unavailable
+  }
+
   const full = join(ENGINE_DIR, relPath);
   const dir = dirname(full);
-  if (!existsSync(dir)) await mkdir(dir, { recursive: true });
-  await writeFile(full, JSON.stringify(data, null, 2), "utf-8");
+
+  if (!knownDirs.has(dir)) {
+    await mkdir(dir, { recursive: true });
+    knownDirs.add(dir);
+  }
+
+  try {
+    await writeFile(full, JSON.stringify(data, null, 2), "utf-8");
+  } catch (error) {
+    if ((error as { code?: string }).code === 'ENOENT') {
+      // Directory might have been deleted externally
+      knownDirs.delete(dir);
+      await mkdir(dir, { recursive: true });
+      knownDirs.add(dir);
+      await writeFile(full, JSON.stringify(data, null, 2), "utf-8");
+    } else {
+      throw error;
+    }
+  }
 }
 
 export async function getEngineState(): Promise<EngineState> {
@@ -104,15 +139,37 @@ export async function getRevenueTracker(): Promise<RevenueTracker> {
 }
 
 export async function appendLog(line: string): Promise<void> {
+  let writeFile, appendFile, mkdir;
+  try {
+    const fs = await import("fs/promises");
+    writeFile = fs.writeFile;
+    appendFile = fs.appendFile;
+    mkdir = fs.mkdir;
+  } catch {
+    return;
+  }
+
   const date = new Date().toISOString().split("T")[0];
   const logFile = join(ENGINE_DIR, "progress", `${date}.log`);
   const logDir = join(ENGINE_DIR, "progress");
-  if (!existsSync(logDir)) await mkdir(logDir, { recursive: true });
+
+  if (!knownDirs.has(logDir)) {
+      await mkdir(logDir, { recursive: true });
+      knownDirs.add(logDir);
+  }
+
   const timestamp = new Date().toISOString();
   const entry = `[${timestamp}] ${line}\n`;
   try {
     await appendFile(logFile, entry, "utf-8");
-  } catch {
-    await writeFile(logFile, entry, "utf-8");
+  } catch (error) {
+    if ((error as { code?: string }).code === 'ENOENT') {
+        knownDirs.delete(logDir);
+        await mkdir(logDir, { recursive: true });
+        knownDirs.add(logDir);
+        await appendFile(logFile, entry, "utf-8");
+    } else {
+        await writeFile(logFile, entry, "utf-8");
+    }
   }
 }

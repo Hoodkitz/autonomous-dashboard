@@ -11,9 +11,7 @@
  * and evolves prompt templates to extract maximum performance.
  */
 
-import { readFile, writeFile, mkdir } from "fs/promises";
 import { join, dirname } from "path";
-import { existsSync } from "fs";
 import { homedir } from "os";
 
 const HOME = process.env.USERPROFILE || homedir();
@@ -228,17 +226,31 @@ Output ONLY the improved template text. No explanations.`,
 // ======= STATE MANAGEMENT =======
 
 async function ensureDir(): Promise<void> {
-  if (!existsSync(META_DIR)) await mkdir(META_DIR, { recursive: true });
+  try {
+    const { mkdir } = await import("fs/promises");
+    const { existsSync } = await import("fs");
+    if (!existsSync(META_DIR)) await mkdir(META_DIR, { recursive: true });
+  } catch { /* ignore */ }
 }
 
 export async function getMetaState(): Promise<MetaPromptState> {
   await ensureDir();
   const statePath = join(META_DIR, "state.json");
+  let readFile, existsSync;
   try {
-    if (existsSync(statePath)) {
-      return JSON.parse(await readFile(statePath, "utf-8"));
-    }
-  } catch { /* fall through */ }
+    readFile = (await import("fs/promises")).readFile;
+    existsSync = (await import("fs")).existsSync;
+  } catch {
+    // Fallthrough to defaults if FS is unavailable
+  }
+
+  if (readFile && existsSync) {
+    try {
+      if (existsSync(statePath)) {
+        return JSON.parse(await readFile(statePath, "utf-8"));
+      }
+    } catch { /* fall through */ }
+  }
 
   // Initialize with defaults
   const templates = DEFAULT_TEMPLATES.map((t, i) => ({
@@ -263,7 +275,10 @@ export async function getMetaState(): Promise<MetaPromptState> {
 async function saveMetaState(state: MetaPromptState): Promise<void> {
   await ensureDir();
   const statePath = join(META_DIR, "state.json");
-  await writeFile(statePath, JSON.stringify(state, null, 2), "utf-8");
+  try {
+    const { writeFile } = await import("fs/promises");
+    await writeFile(statePath, JSON.stringify(state, null, 2), "utf-8");
+  } catch { /* ignore */ }
 }
 
 // ======= PROMPT GENERATION =======
