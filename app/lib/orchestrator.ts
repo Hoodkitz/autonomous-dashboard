@@ -1,6 +1,6 @@
-import { spawn } from "child_process";
+
 import { getApiKey, chatCompletion, type ChatMessage } from "./openrouter";
-import { appendLog, updateEngineState, getVault } from "./engine";
+import { appendLog } from "./engine";
 
 // All available capabilities the orchestrator can use
 export interface Capability {
@@ -50,7 +50,7 @@ export interface StepResult {
 }
 
 // Run a CLI agent and return its output
-export function runCliAgent(agent: string, prompt: string, cwd: string): Promise<{ output: string; error: string; code: number }> {
+export async function runCliAgent(agent: string, prompt: string, cwd: string): Promise<{ output: string; error: string; code: number }> {
   const commands: Record<string, { cmd: string; args: (p: string) => string[] }> = {
     claude: { cmd: "claude", args: (p) => ["--print", "--dangerously-skip-permissions", p] },
     gemini: { cmd: "gemini", args: (p) => ["-p", p] },
@@ -58,20 +58,25 @@ export function runCliAgent(agent: string, prompt: string, cwd: string): Promise
   };
 
   const config = commands[agent];
-  if (!config) return Promise.resolve({ output: "", error: `Unknown CLI agent: ${agent}`, code: 1 });
+  if (!config) return { output: "", error: `Unknown CLI agent: ${agent}`, code: 1 };
 
-  return new Promise((resolve) => {
-    let output = "";
-    let error = "";
-    const child = spawn(config.cmd, config.args(prompt), {
-      cwd, shell: true,
-      env: { ...process.env, FORCE_COLOR: "0" },
+  try {
+    const { spawn } = await import("child_process");
+    return new Promise((resolve) => {
+      let output = "";
+      let error = "";
+      const child = spawn(config.cmd, config.args(prompt), {
+        cwd, shell: true,
+        env: { ...process.env, FORCE_COLOR: "0" },
+      });
+      child.stdout?.on("data", (c: Buffer) => { output += c.toString(); });
+      child.stderr?.on("data", (c: Buffer) => { error += c.toString(); });
+      child.on("close", (code) => resolve({ output, error, code: code || 0 }));
+      child.on("error", (err) => resolve({ output, error: err.message, code: 1 }));
     });
-    child.stdout?.on("data", (c: Buffer) => { output += c.toString(); });
-    child.stderr?.on("data", (c: Buffer) => { error += c.toString(); });
-    child.on("close", (code) => resolve({ output, error, code: code || 0 }));
-    child.on("error", (err) => resolve({ output, error: err.message, code: 1 }));
-  });
+  } catch {
+    return { output: "", error: "child_process not available", code: 1 };
+  }
 }
 
 // Run an OpenRouter model

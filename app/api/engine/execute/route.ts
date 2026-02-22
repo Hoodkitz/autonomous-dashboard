@@ -1,8 +1,6 @@
 import { NextRequest } from "next/server";
-import { spawn } from "child_process";
 import { appendLog, updateEngineState, getEngineState, writeJson } from "@/app/lib/engine";
 import { generatePrompt, recordOutcome, shouldEvolve, evolveTemplate, applyEvolution } from "@/app/lib/meta-prompt";
-import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
 
@@ -19,39 +17,49 @@ interface ExecuteRequest {
   maxCycles?: number;
 }
 
-function runAgent(
+async function runAgent(
   agent: "claude" | "gemini" | "openclaw",
   prompt: string,
   cwd: string
 ): Promise<{ output: string; error: string; code: number }> {
-  return new Promise((resolve) => {
-    const cmds: Record<string, { cmd: string; args: string[] }> = {
-      claude: { cmd: "claude", args: ["--print", "--dangerously-skip-permissions", prompt] },
-      gemini: { cmd: "gemini", args: ["-p", prompt] },
-      openclaw: { cmd: "openclaw", args: ["agent", "--local", "--json", "--message", prompt] },
-    };
-    const cfg = cmds[agent] || cmds.claude;
-    let output = "";
-    let error = "";
-    const child = spawn(cfg.cmd, cfg.args, {
-      cwd,
-      shell: true,
-      env: { ...process.env, FORCE_COLOR: "0" },
+  const cmds: Record<string, { cmd: string; args: string[] }> = {
+    claude: { cmd: "claude", args: ["--print", "--dangerously-skip-permissions", prompt] },
+    gemini: { cmd: "gemini", args: ["-p", prompt] },
+    openclaw: { cmd: "openclaw", args: ["agent", "--local", "--json", "--message", prompt] },
+  };
+  const cfg = cmds[agent] || cmds.claude;
+
+  try {
+    const { spawn } = await import("child_process");
+    return new Promise((resolve) => {
+      let output = "";
+      let error = "";
+      const child = spawn(cfg.cmd, cfg.args, {
+        cwd,
+        shell: true,
+        env: { ...process.env, FORCE_COLOR: "0" },
+      });
+      child.stdout?.on("data", (c: Buffer) => { output += c.toString(); });
+      child.stderr?.on("data", (c: Buffer) => { error += c.toString(); });
+      child.on("close", (code) => resolve({ output, error, code: code || 0 }));
+      child.on("error", (err) => resolve({ output, error: err.message, code: 1 }));
     });
-    child.stdout?.on("data", (c: Buffer) => { output += c.toString(); });
-    child.stderr?.on("data", (c: Buffer) => { error += c.toString(); });
-    child.on("close", (code) => resolve({ output, error, code: code || 0 }));
-    child.on("error", (err) => resolve({ output, error: err.message, code: 1 }));
-  });
+  } catch {
+    return { output: "", error: "child_process not available", code: 1 };
+  }
 }
 
 // Load the SKILL.md knowledge base for agent context
-function getSkillContext(): string {
+async function getSkillContext(): Promise<string> {
   const skillPath = join(HOME, ".claude", "skills", "autonomous-symbiotic-engine", "SKILL.md");
-  if (existsSync(skillPath)) {
-    const content = readFileSync(skillPath, "utf-8");
-    return content.slice(0, 4000);
-  }
+  try {
+    const { readFile } = await import("fs/promises");
+    const { existsSync } = await import("fs");
+    if (existsSync(skillPath)) {
+      const content = await readFile(skillPath, "utf-8");
+      return content.slice(0, 4000);
+    }
+  } catch { /* ignore */ }
   return "Autonomous Symbiotic Engine with 5 cores: Autopilot, Agentic Dev, Ralph Loop, AI Workflow, Revenue Engine.";
 }
 
@@ -59,7 +67,7 @@ export async function POST(req: NextRequest) {
   const body: ExecuteRequest = await req.json();
   const { task, workDir, maxCycles = 3 } = body;
   const cwd = workDir || HOME;
-  const skillContext = getSkillContext();
+  const skillContext = await getSkillContext();
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({

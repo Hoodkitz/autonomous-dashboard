@@ -1,5 +1,4 @@
 import { NextRequest } from "next/server";
-import { spawn } from "child_process";
 import { appendLog, updateEngineState } from "@/app/lib/engine";
 
 export const dynamic = "force-dynamic";
@@ -46,96 +45,103 @@ export async function POST(req: NextRequest) {
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
-    start(controller) {
-      const cwd = workDir || process.env.USERPROFILE || "C:\\Users\\Administrator";
-      const child = spawn(config.cmd, config.args(prompt), {
-        cwd,
-        shell: true,
-        env: { ...process.env, FORCE_COLOR: "0" },
-      });
+    async start(controller) {
+      try {
+        const { spawn } = await import("child_process");
+        const cwd = workDir || process.env.USERPROFILE || "C:\\Users\\Administrator";
+        const child = spawn(config.cmd, config.args(prompt), {
+          cwd,
+          shell: true,
+          env: { ...process.env, FORCE_COLOR: "0" },
+        });
 
-      let fullOutput = "";
-      let errorOutput = "";
+        let fullOutput = "";
+        let errorOutput = "";
 
-      child.stdout?.on("data", (chunk: Buffer) => {
-        const text = chunk.toString();
-        fullOutput += text;
-        const msg = JSON.stringify({ type: "stdout", agent, data: text }) + "\n";
-        controller.enqueue(encoder.encode(msg));
-      });
+        child.stdout?.on("data", (chunk: Buffer) => {
+          const text = chunk.toString();
+          fullOutput += text;
+          const msg = JSON.stringify({ type: "stdout", agent, data: text }) + "\n";
+          controller.enqueue(encoder.encode(msg));
+        });
 
-      child.stderr?.on("data", (chunk: Buffer) => {
-        const text = chunk.toString();
-        errorOutput += text;
-        const msg = JSON.stringify({ type: "stderr", agent, data: text }) + "\n";
-        controller.enqueue(encoder.encode(msg));
-      });
+        child.stderr?.on("data", (chunk: Buffer) => {
+          const text = chunk.toString();
+          errorOutput += text;
+          const msg = JSON.stringify({ type: "stderr", agent, data: text }) + "\n";
+          controller.enqueue(encoder.encode(msg));
+        });
 
-      child.on("close", async (code) => {
-        await appendLog(`[${agent.toUpperCase()}] Exit code: ${code}`);
+        child.on("close", async (code) => {
+          await appendLog(`[${agent.toUpperCase()}] Exit code: ${code}`);
 
-        if (code !== 0 && autoDebug && errorOutput) {
-          const debugMsg = JSON.stringify({
-            type: "system",
-            agent: "debugger",
-            data: `Agent ${agent} failed (exit ${code}). Auto-debug analyzing error...`,
-          }) + "\n";
-          controller.enqueue(encoder.encode(debugMsg));
-
-          // Self-debug: re-run with error context
-          const debugPrompt = `The previous command failed with this error:\n\n${errorOutput.slice(0, 2000)}\n\nOriginal task: ${prompt}\n\nAnalyze the error and fix it. Provide the corrected approach.`;
-          const debugChild = spawn(config.cmd, config.args(debugPrompt), {
-            cwd,
-            shell: true,
-            env: { ...process.env, FORCE_COLOR: "0" },
-          });
-
-          debugChild.stdout?.on("data", (chunk: Buffer) => {
-            const text = chunk.toString();
-            const msg = JSON.stringify({ type: "stdout", agent: `${agent}-debug`, data: text }) + "\n";
-            controller.enqueue(encoder.encode(msg));
-          });
-
-          debugChild.stderr?.on("data", (chunk: Buffer) => {
-            const text = chunk.toString();
-            const msg = JSON.stringify({ type: "stderr", agent: `${agent}-debug`, data: text }) + "\n";
-            controller.enqueue(encoder.encode(msg));
-          });
-
-          debugChild.on("close", async (debugCode) => {
-            await appendLog(`[${agent.toUpperCase()}-DEBUG] Exit code: ${debugCode}`);
-            await updateEngineState({ status: "idle", executorTier: null });
-            const endMsg = JSON.stringify({
-              type: "done",
-              agent,
-              exitCode: code,
-              debugExitCode: debugCode,
+          if (code !== 0 && autoDebug && errorOutput) {
+            const debugMsg = JSON.stringify({
+              type: "system",
+              agent: "debugger",
+              data: `Agent ${agent} failed (exit ${code}). Auto-debug analyzing error...`,
             }) + "\n";
+            controller.enqueue(encoder.encode(debugMsg));
+
+            // Self-debug: re-run with error context
+            const debugPrompt = `The previous command failed with this error:\n\n${errorOutput.slice(0, 2000)}\n\nOriginal task: ${prompt}\n\nAnalyze the error and fix it. Provide the corrected approach.`;
+            const debugChild = spawn(config.cmd, config.args(debugPrompt), {
+              cwd,
+              shell: true,
+              env: { ...process.env, FORCE_COLOR: "0" },
+            });
+
+            debugChild.stdout?.on("data", (chunk: Buffer) => {
+              const text = chunk.toString();
+              const msg = JSON.stringify({ type: "stdout", agent: `${agent}-debug`, data: text }) + "\n";
+              controller.enqueue(encoder.encode(msg));
+            });
+
+            debugChild.stderr?.on("data", (chunk: Buffer) => {
+              const text = chunk.toString();
+              const msg = JSON.stringify({ type: "stderr", agent: `${agent}-debug`, data: text }) + "\n";
+              controller.enqueue(encoder.encode(msg));
+            });
+
+            debugChild.on("close", async (debugCode) => {
+              await appendLog(`[${agent.toUpperCase()}-DEBUG] Exit code: ${debugCode}`);
+              await updateEngineState({ status: "idle", executorTier: null });
+              const endMsg = JSON.stringify({
+                type: "done",
+                agent,
+                exitCode: code,
+                debugExitCode: debugCode,
+              }) + "\n";
+              controller.enqueue(encoder.encode(endMsg));
+              controller.close();
+            });
+
+            debugChild.on("error", async (err) => {
+              const errMsg = JSON.stringify({ type: "error", agent: `${agent}-debug`, data: err.message }) + "\n";
+              controller.enqueue(encoder.encode(errMsg));
+              await updateEngineState({ status: "idle", executorTier: null });
+              controller.close();
+            });
+          } else {
+            await updateEngineState({ status: "idle", executorTier: null });
+            const endMsg = JSON.stringify({ type: "done", agent, exitCode: code }) + "\n";
             controller.enqueue(encoder.encode(endMsg));
             controller.close();
-          });
+          }
+        });
 
-          debugChild.on("error", async (err) => {
-            const errMsg = JSON.stringify({ type: "error", agent: `${agent}-debug`, data: err.message }) + "\n";
-            controller.enqueue(encoder.encode(errMsg));
-            await updateEngineState({ status: "idle", executorTier: null });
-            controller.close();
-          });
-        } else {
-          await updateEngineState({ status: "idle", executorTier: null });
-          const endMsg = JSON.stringify({ type: "done", agent, exitCode: code }) + "\n";
-          controller.enqueue(encoder.encode(endMsg));
+        child.on("error", async (err) => {
+          const errMsg = JSON.stringify({ type: "error", agent, data: err.message }) + "\n";
+          controller.enqueue(encoder.encode(errMsg));
+          await appendLog(`[${agent.toUpperCase()}] Error: ${err.message}`);
+          await updateEngineState({ status: "failed", executorTier: null });
           controller.close();
-        }
-      });
-
-      child.on("error", async (err) => {
-        const errMsg = JSON.stringify({ type: "error", agent, data: err.message }) + "\n";
+        });
+      } catch (err) {
+        const errMsg = JSON.stringify({ type: "error", agent, data: (err as Error).message }) + "\n";
         controller.enqueue(encoder.encode(errMsg));
-        await appendLog(`[${agent.toUpperCase()}] Error: ${err.message}`);
-        await updateEngineState({ status: "failed", executorTier: null });
         controller.close();
-      });
+      }
     },
   });
 
