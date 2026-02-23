@@ -11,13 +11,21 @@
  * and evolves prompt templates to extract maximum performance.
  */
 
-import { readFile, writeFile, mkdir } from "fs/promises";
-import { join, dirname } from "path";
-import { existsSync } from "fs";
-import { homedir } from "os";
+// Helpers for dynamic imports
+async function getNodeModules() {
+  const [fs, path, os] = await Promise.all([
+    import("fs/promises"),
+    import("path"),
+    import("os"),
+  ]);
+  return { fs, path, os };
+}
 
-const HOME = process.env.USERPROFILE || homedir();
-const META_DIR = join(HOME, ".autonomous-engine", "meta-prompts");
+async function getMetaDir() {
+  const { path, os } = await getNodeModules();
+  const HOME = process.env.USERPROFILE || os.homedir();
+  return path.join(HOME, ".autonomous-engine", "meta-prompts");
+}
 
 // ======= TYPES =======
 
@@ -228,16 +236,21 @@ Output ONLY the improved template text. No explanations.`,
 // ======= STATE MANAGEMENT =======
 
 async function ensureDir(): Promise<void> {
-  if (!existsSync(META_DIR)) await mkdir(META_DIR, { recursive: true });
+  const { fs } = await getNodeModules();
+  const META_DIR = await getMetaDir();
+  // Safe recursive mkdir
+  await fs.mkdir(META_DIR, { recursive: true });
 }
 
 export async function getMetaState(): Promise<MetaPromptState> {
   await ensureDir();
-  const statePath = join(META_DIR, "state.json");
+  const { fs, path } = await getNodeModules();
+  const META_DIR = await getMetaDir();
+  const statePath = path.join(META_DIR, "state.json");
+
   try {
-    if (existsSync(statePath)) {
-      return JSON.parse(await readFile(statePath, "utf-8"));
-    }
+    const content = await fs.readFile(statePath, "utf-8");
+    return JSON.parse(content);
   } catch { /* fall through */ }
 
   // Initialize with defaults
@@ -262,8 +275,10 @@ export async function getMetaState(): Promise<MetaPromptState> {
 
 async function saveMetaState(state: MetaPromptState): Promise<void> {
   await ensureDir();
-  const statePath = join(META_DIR, "state.json");
-  await writeFile(statePath, JSON.stringify(state, null, 2), "utf-8");
+  const { fs, path } = await getNodeModules();
+  const META_DIR = await getMetaDir();
+  const statePath = path.join(META_DIR, "state.json");
+  await fs.writeFile(statePath, JSON.stringify(state, null, 2), "utf-8");
 }
 
 // ======= PROMPT GENERATION =======

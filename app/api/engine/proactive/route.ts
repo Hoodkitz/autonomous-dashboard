@@ -3,6 +3,7 @@ import { getApiKey, chatCompletion } from "@/app/lib/openrouter";
 import { getVault, getEngineState, getOpportunities, appendLog, writeJson } from "@/app/lib/engine";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 export const maxDuration = 120;
 
 interface ProactiveAction {
@@ -73,6 +74,7 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // Fetch all context in parallel
   const [vault, state, opportunities] = await Promise.all([
     getVault(),
     getEngineState(),
@@ -128,6 +130,9 @@ export async function POST(req: NextRequest) {
           const jsonMatch = content.match(/\[[\s\S]*\]/);
           if (jsonMatch) {
             actions = JSON.parse(jsonMatch[0]);
+          } else {
+            // If no JSON block found, try parsing whole response
+            actions = JSON.parse(content);
           }
         } catch {
           actions = [{

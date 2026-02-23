@@ -8,16 +8,26 @@
  * Human-in-loop: go/no-go checkpoints before deployment
  */
 
-import { runCliAgent, runOpenRouterModel, CAPABILITIES } from "./orchestrator";
+import { runCliAgent, runOpenRouterModel } from "./orchestrator";
 import { getApiKey, chatCompletion, type ChatMessage } from "./openrouter";
-import { appendLog, writeJson, getEngineState, updateEngineState } from "./engine";
-import { readFile, writeFile, mkdir } from "fs/promises";
-import { join } from "path";
-import { existsSync } from "fs";
-import { homedir } from "os";
+import { appendLog, getEngineState, updateEngineState } from "./engine";
 
-const HOME = process.env.USERPROFILE || homedir();
-const PIPELINE_DIR = join(HOME, ".autonomous-engine", "pipeline");
+// Helper to load Node.js modules dynamically
+async function getNodeModules() {
+  const [fs, path, os] = await Promise.all([
+    import("fs/promises"),
+    import("path"),
+    import("os"),
+  ]);
+  return { fs, path, os };
+}
+
+// Helper to resolve pipeline directory
+async function getPipelineDir() {
+  const { path, os } = await getNodeModules();
+  const HOME = process.env.USERPROFILE || os.homedir();
+  return path.join(HOME, ".autonomous-engine", "pipeline");
+}
 
 // ============ TYPES ============
 
@@ -94,18 +104,27 @@ function newState(goal: string, config: PipelineConfig): PipelineState {
 }
 
 async function saveState(state: PipelineState): Promise<void> {
-  if (!existsSync(PIPELINE_DIR)) await mkdir(PIPELINE_DIR, { recursive: true });
+  const { fs, path } = await getNodeModules();
+  const PIPELINE_DIR = await getPipelineDir();
+
+  // Use engine's knownDirs cache if possible, but here we do simple check or rely on mkdir recursive
+  await fs.mkdir(PIPELINE_DIR, { recursive: true });
+
   state.updated_at = new Date().toISOString();
-  await writeFile(join(PIPELINE_DIR, `${state.id}.json`), JSON.stringify(state, null, 2));
+  await fs.writeFile(path.join(PIPELINE_DIR, `${state.id}.json`), JSON.stringify(state, null, 2));
   // Also save as "latest"
-  await writeFile(join(PIPELINE_DIR, "latest.json"), JSON.stringify(state, null, 2));
+  await fs.writeFile(path.join(PIPELINE_DIR, "latest.json"), JSON.stringify(state, null, 2));
 }
 
 export async function loadLatestState(): Promise<PipelineState | null> {
   try {
-    const path = join(PIPELINE_DIR, "latest.json");
-    if (!existsSync(path)) return null;
-    return JSON.parse(await readFile(path, "utf-8"));
+    const { fs, path } = await getNodeModules();
+    const PIPELINE_DIR = await getPipelineDir();
+    const filePath = path.join(PIPELINE_DIR, "latest.json");
+
+    // Direct read with try/catch instead of existsSync
+    const data = await fs.readFile(filePath, "utf-8");
+    return JSON.parse(data);
   } catch { return null; }
 }
 
@@ -119,10 +138,6 @@ function trackCost(state: PipelineState, category: string, amount: number) {
 
 function budgetExceeded(state: PipelineState): boolean {
   return state.cost.total_usd >= state.config.max_cost_usd;
-}
-
-function budgetRemaining(state: PipelineState): number {
-  return Math.max(0, state.config.max_cost_usd - state.cost.total_usd);
 }
 
 // ============ AGENT HELPERS ============

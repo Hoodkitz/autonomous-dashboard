@@ -3,6 +3,7 @@ import { getApiKey, chatCompletion } from "@/app/lib/openrouter";
 import { appendLog, writeJson, getOpportunities, getVault } from "@/app/lib/engine";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 export const maxDuration = 120;
 
 const RESEARCH_PROMPT = `You are an autonomous AI revenue research engine. Your job is to find CONCRETE ways to make money using AI agents, automation, and SaaS tools.
@@ -72,6 +73,7 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: (err as Error).message }, { status: 500 });
   }
 
+  // Promise.all is fine here as getVault and getOpportunities are independent
   const [vault, currentOpps] = await Promise.all([getVault(), getOpportunities()]);
 
   const activeServices = Object.entries(vault.services)
@@ -97,9 +99,11 @@ Research deeply. Think beyond the obvious. Find opportunities others haven't see
         send(JSON.stringify({ type: "status", message: "Researching revenue opportunities with AI..." }) + "\n");
 
         // Use multiple models for diverse perspectives
+        // Note: Check available models in your memory or OpenRouter docs, these are examples
         const models = [
           "google/gemini-2.0-flash-exp:free",
-          "deepseek/deepseek-chat-v3-0324:free",
+          // "deepseek/deepseek-chat-v3-0324:free", // Might be unavailable, using safer fallback
+          "meta-llama/llama-3.3-70b-instruct:free",
         ];
 
         const allOpportunities: Record<string, unknown>[] = [];
@@ -108,38 +112,53 @@ Research deeply. Think beyond the obvious. Find opportunities others haven't see
         for (const model of models) {
           send(JSON.stringify({ type: "status", message: `Querying ${model.split("/")[1]}...` }) + "\n");
 
-          const response = await chatCompletion(apiKey, {
-            model,
-            messages: [
-              { role: "system", content: "You are a revenue research AI. Respond ONLY with valid JSON." },
-              { role: "user", content: contextPrompt },
-            ],
-            stream: false,
-          });
-
-          if (!response.ok) continue;
-
-          const data = await response.json();
-          const content = data.choices?.[0]?.message?.content || "";
-
           try {
-            const jsonMatch = content.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-              const parsed = JSON.parse(jsonMatch[0]);
-              if (parsed.opportunities) allOpportunities.push(...parsed.opportunities);
-              if (parsed.revolutionary_ideas) allRevolutionary.push(...parsed.revolutionary_ideas);
-            }
-          } catch { /* skip parse error */ }
+              const response = await chatCompletion(apiKey, {
+                model,
+                messages: [
+                  { role: "system", content: "You are a revenue research AI. Respond ONLY with valid JSON." },
+                  { role: "user", content: contextPrompt },
+                ],
+                stream: false,
+              });
+
+              if (!response.ok) {
+                  send(JSON.stringify({ type: "warning", message: `Model ${model} failed: ${response.statusText}` }) + "\n");
+                  continue;
+              }
+
+              const data = await response.json();
+              const content = data.choices?.[0]?.message?.content || "";
+
+              const jsonMatch = content.match(/\{[\s\S]*\}/);
+              if (jsonMatch) {
+                const parsed = JSON.parse(jsonMatch[0]);
+                if (parsed.opportunities && Array.isArray(parsed.opportunities)) {
+                    allOpportunities.push(...parsed.opportunities);
+                }
+                if (parsed.revolutionary_ideas && Array.isArray(parsed.revolutionary_ideas)) {
+                    allRevolutionary.push(...parsed.revolutionary_ideas);
+                }
+              }
+          } catch (e) {
+             // Model error, continue to next
+             console.error(`Error querying model ${model}:`, e);
+          }
         }
 
-        // Deduplicate and rank
-        const uniqueOpps = allOpportunities.reduce((acc: Record<string, unknown>[], opp: Record<string, unknown>) => {
-          const name = String(opp.name || "");
-          if (!acc.find((a: Record<string, unknown>) => String(a.name || "") === name)) acc.push(opp);
-          return acc;
-        }, []);
+        // Deduplicate by name
+        const uniqueOpps: Record<string, unknown>[] = [];
+        const seenNames = new Set<string>();
 
-        // Store results
+        for (const opp of allOpportunities) {
+             const name = String(opp.name || "").toLowerCase().trim();
+             if (name && !seenNames.has(name)) {
+                 seenNames.add(name);
+                 uniqueOpps.push(opp);
+             }
+        }
+
+        // Store results (latest run)
         await writeJson("revenue/research-latest.json", {
           timestamp: new Date().toISOString(),
           opportunities: uniqueOpps,
@@ -148,10 +167,16 @@ Research deeply. Think beyond the obvious. Find opportunities others haven't see
         });
 
         // Also update main opportunities file with merged data
-        const merged = [...currentOpps.map(o => ({ ...o }))];
+        // We need to type 'merged' correctly as Opportunity[]
+        // But currentOpps is already typed.
+
+        // Let's just create a new list merging existing and new unique ones
+        const merged = [...currentOpps];
+
         for (const opp of uniqueOpps) {
           const name = String(opp.name || "");
-          if (!merged.find(m => m.name === name)) {
+          // Check if already in main list
+          if (!merged.find(m => m.name.toLowerCase() === name.toLowerCase())) {
             merged.push({
               rank: merged.length + 1,
               name,
@@ -169,6 +194,7 @@ Research deeply. Think beyond the obvious. Find opportunities others haven't see
             });
           }
         }
+
         await writeJson("revenue/opportunities.json", { opportunities: merged });
 
         send(JSON.stringify({
@@ -179,11 +205,12 @@ Research deeply. Think beyond the obvious. Find opportunities others haven't see
           merged_total: merged.length,
         }) + "\n");
 
-        await appendLog(`[REVENUE-RESEARCH] Found ${uniqueOpps.length} opportunities, ${allRevolutionary.length} revolutionary ideas`);
+        await appendLog(`[REVENUE-RESEARCH] Found ${uniqueOpps.length} new opportunities`);
 
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        send(JSON.stringify({ type: "error", data: msg }) + "\n");
+        const errorMsg = JSON.stringify({ type: "error", data: msg }) + "\n";
+        controller.enqueue(encoder.encode(errorMsg));
         await appendLog(`[REVENUE-RESEARCH] Error: ${msg}`);
       }
 

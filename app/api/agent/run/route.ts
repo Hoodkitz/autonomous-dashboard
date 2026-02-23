@@ -1,8 +1,8 @@
 import { NextRequest } from "next/server";
-import { spawn } from "child_process";
 import { appendLog, updateEngineState } from "@/app/lib/engine";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 export const maxDuration = 300;
 
 interface AgentRequest {
@@ -45,7 +45,10 @@ export async function POST(req: NextRequest) {
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
-    start(controller) {
+    async start(controller) {
+      // Dynamic import for child_process
+      const { spawn } = await import("child_process");
+
       const cwd = workDir || process.env.USERPROFILE || "C:\\Users\\Administrator";
       const child = spawn(config.cmd, config.args(prompt), {
         cwd,

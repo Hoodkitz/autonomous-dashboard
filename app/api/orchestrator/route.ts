@@ -3,6 +3,7 @@ import { planExecution, executeStep, selfOptimize, CAPABILITIES, type StepResult
 import { appendLog, updateEngineState } from "@/app/lib/engine";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 export const maxDuration = 300;
 
 interface OrchestratorRequest {
@@ -40,8 +41,10 @@ export async function POST(req: NextRequest) {
         }) + "\n");
         await appendLog(`[UNIFIED] Planning: ${goal.slice(0, 100)}`);
 
+        // Phase 1: Plan Execution
+        // Using dynamic imports for safety (though planExecution uses OpenRouter which is HTTP)
         const plan = await planExecution({ goal, context, prefer_free, max_steps });
-        const steps = plan.steps.slice(0, max_steps);
+        const steps = plan.steps.slice(0, max_steps); // Limit steps
 
         send(JSON.stringify({
           type: "plan",
@@ -69,17 +72,28 @@ export async function POST(req: NextRequest) {
             executorTier: step.agent_id,
           });
 
-          // Inject previous step's output as context
+          // Inject previous step's output as context if available
+          // This allows chaining results between agents
           const augmentedPrompt = previousOutput
             ? `${step.prompt}\n\nPrevious step output (for context):\n${previousOutput.slice(0, 2000)}`
             : step.prompt;
 
-          const result = await executeStep(
+          // Helper wrapper for executeStep to handle progress
+          const resultWrapper = await executeStep(
             { ...step, prompt: augmentedPrompt },
             cwd,
             send,
           );
-          result.step = currentStep;
+
+          const result = {
+             step: currentStep,
+             agent: resultWrapper.agent,
+             action: resultWrapper.action,
+             result: resultWrapper.result,
+             success: resultWrapper.success,
+             duration_ms: resultWrapper.duration_ms
+          };
+
           results.push(result);
 
           if (result.success && result.result) {
@@ -95,7 +109,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Phase 3: Self-optimize
-        if (auto_optimize) {
+        if (auto_optimize && results.length > 0) {
           send(JSON.stringify({
             type: "phase",
             phase: "optimization",
@@ -136,7 +150,8 @@ export async function POST(req: NextRequest) {
 
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        send(JSON.stringify({ type: "error", data: msg }) + "\n");
+        const errorJson = JSON.stringify({ type: "error", data: msg }) + "\n";
+        controller.enqueue(encoder.encode(errorJson));
         await appendLog(`[UNIFIED] Error: ${msg}`);
         await updateEngineState({ status: "failed", phase: null, executorTier: null });
       }
