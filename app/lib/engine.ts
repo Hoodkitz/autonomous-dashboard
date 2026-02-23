@@ -1,10 +1,12 @@
 import { readFile, writeFile, appendFile, mkdir } from "fs/promises";
 import { join, dirname } from "path";
-import { existsSync } from "fs";
 import { homedir } from "os";
 
 const HOME = process.env.USERPROFILE || homedir();
 const ENGINE_DIR = join(HOME, ".autonomous-engine");
+
+// Cache known existing directories to avoid redundant mkdir calls
+const knownDirs = new Set<string>();
 
 export interface EngineState {
   status: string;
@@ -58,7 +60,7 @@ export interface RevenueTracker {
 async function readJson<T>(relPath: string, fallback: T): Promise<T> {
   try {
     const full = join(ENGINE_DIR, relPath);
-    if (!existsSync(full)) return fallback;
+    // Optimized: Direct read with try/catch avoids blocking existsSync check
     const data = await readFile(full, "utf-8");
     return JSON.parse(data) as T;
   } catch {
@@ -69,7 +71,13 @@ async function readJson<T>(relPath: string, fallback: T): Promise<T> {
 export async function writeJson(relPath: string, data: unknown): Promise<void> {
   const full = join(ENGINE_DIR, relPath);
   const dir = dirname(full);
-  if (!existsSync(dir)) await mkdir(dir, { recursive: true });
+
+  // Optimized: Cache known directories to avoid redundant syscalls
+  if (!knownDirs.has(dir)) {
+    await mkdir(dir, { recursive: true });
+    knownDirs.add(dir);
+  }
+
   await writeFile(full, JSON.stringify(data, null, 2), "utf-8");
 }
 
@@ -107,7 +115,13 @@ export async function appendLog(line: string): Promise<void> {
   const date = new Date().toISOString().split("T")[0];
   const logFile = join(ENGINE_DIR, "progress", `${date}.log`);
   const logDir = join(ENGINE_DIR, "progress");
-  if (!existsSync(logDir)) await mkdir(logDir, { recursive: true });
+
+  // Optimized: Use cache to avoid checking directory existence on every log
+  if (!knownDirs.has(logDir)) {
+    await mkdir(logDir, { recursive: true });
+    knownDirs.add(logDir);
+  }
+
   const timestamp = new Date().toISOString();
   const entry = `[${timestamp}] ${line}\n`;
   try {
