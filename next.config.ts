@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  allowedDevices: undefined, // Allow all devices
+  // allowedDevices removed as it is not a valid Next.js config option
   serverExternalPackages: ["playwright"],
 };
 
