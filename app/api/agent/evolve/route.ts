@@ -1,14 +1,9 @@
 import { NextRequest } from "next/server";
-import { spawn } from "child_process";
 import { appendLog, updateEngineState } from "@/app/lib/engine";
-import { readFileSync, writeFileSync, existsSync } from "fs";
-import { join } from "path";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 300;
-
-const DASHBOARD_DIR = join(process.env.USERPROFILE || "C:\\Users\\Administrator", "autonomous-dashboard");
 
 interface EvolveRequest {
   target: "self" | "file";
@@ -24,8 +19,31 @@ export async function POST(req: NextRequest) {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
+      // Dynamic imports for Node.js modules
+      const { spawn } = await import("child_process");
+      const { readFileSync, writeFileSync, existsSync } = await import("fs");
+      const { join } = await import("path");
+
+      const DASHBOARD_DIR = join(process.env.USERPROFILE || "C:\\Users\\Administrator", "autonomous-dashboard");
+
       function send(type: string, agentName: string, data: string) {
         controller.enqueue(encoder.encode(JSON.stringify({ type, agent: agentName, data }) + "\n"));
+      }
+
+      function runAgent(agent: string, prompt: string, cwd: string): Promise<{ output: string; error: string; code: number }> {
+        return new Promise((resolve) => {
+          const cmds: Record<string, { cmd: string; args: string[] }> = {
+            claude: { cmd: "claude", args: ["--print", "--dangerously-skip-permissions", prompt] },
+            gemini: { cmd: "gemini", args: ["-p", prompt] },
+          };
+          const cfg = cmds[agent] || cmds.claude;
+          let output = "", error = "";
+          const child = spawn(cfg.cmd, cfg.args, { cwd, shell: true, env: { ...process.env, FORCE_COLOR: "0" } });
+          child.stdout?.on("data", (c: Buffer) => { output += c.toString(); });
+          child.stderr?.on("data", (c: Buffer) => { error += c.toString(); });
+          child.on("close", (code) => resolve({ output, error, code: code || 0 }));
+          child.on("error", (err) => resolve({ output, error: err.message, code: 1 }));
+        });
       }
 
       try {
@@ -141,21 +159,5 @@ export async function POST(req: NextRequest) {
 
   return new Response(stream, {
     headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-cache" },
-  });
-}
-
-function runAgent(agent: string, prompt: string, cwd: string): Promise<{ output: string; error: string; code: number }> {
-  return new Promise((resolve) => {
-    const cmds: Record<string, { cmd: string; args: string[] }> = {
-      claude: { cmd: "claude", args: ["--print", "--dangerously-skip-permissions", prompt] },
-      gemini: { cmd: "gemini", args: ["-p", prompt] },
-    };
-    const cfg = cmds[agent] || cmds.claude;
-    let output = "", error = "";
-    const child = spawn(cfg.cmd, cfg.args, { cwd, shell: true, env: { ...process.env, FORCE_COLOR: "0" } });
-    child.stdout?.on("data", (c: Buffer) => { output += c.toString(); });
-    child.stderr?.on("data", (c: Buffer) => { error += c.toString(); });
-    child.on("close", (code) => resolve({ output, error, code: code || 0 }));
-    child.on("error", (err) => resolve({ output, error: err.message, code: 1 }));
   });
 }

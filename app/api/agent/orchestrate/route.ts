@@ -1,5 +1,4 @@
 import { NextRequest } from "next/server";
-import { spawn } from "child_process";
 import { appendLog, updateEngineState } from "@/app/lib/engine";
 
 export const dynamic = "force-dynamic";
@@ -9,19 +8,6 @@ export const maxDuration = 300;
 interface OrchestrateRequest {
   task: string;
   workDir?: string;
-}
-
-function runAgent(agent: string, cmd: string, args: string[], cwd: string): Promise<{ output: string; error: string; code: number }> {
-  return new Promise((resolve) => {
-    let output = "";
-    let error = "";
-    const child = spawn(cmd, args, { cwd, shell: true, env: { ...process.env, FORCE_COLOR: "0" } });
-
-    child.stdout?.on("data", (c: Buffer) => { output += c.toString(); });
-    child.stderr?.on("data", (c: Buffer) => { error += c.toString(); });
-    child.on("close", (code) => resolve({ output, error, code: code || 0 }));
-    child.on("error", (err) => resolve({ output, error: err.message, code: 1 }));
-  });
 }
 
 export async function POST(req: NextRequest) {
@@ -41,6 +27,22 @@ export async function POST(req: NextRequest) {
     async start(controller) {
       function send(type: string, agent: string, data: string) {
         controller.enqueue(encoder.encode(JSON.stringify({ type, agent, data }) + "\n"));
+      }
+
+      // Dynamic import
+      const { spawn } = await import("child_process");
+
+      function runAgent(agent: string, cmd: string, args: string[], cwd: string): Promise<{ output: string; error: string; code: number }> {
+        return new Promise((resolve) => {
+          let output = "";
+          let error = "";
+          const child = spawn(cmd, args, { cwd, shell: true, env: { ...process.env, FORCE_COLOR: "0" } });
+
+          child.stdout?.on("data", (c: Buffer) => { output += c.toString(); });
+          child.stderr?.on("data", (c: Buffer) => { error += c.toString(); });
+          child.on("close", (code) => resolve({ output, error, code: code || 0 }));
+          child.on("error", (err) => resolve({ output, error: err.message, code: 1 }));
+        });
       }
 
       try {
