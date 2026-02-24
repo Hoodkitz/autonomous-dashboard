@@ -1,10 +1,18 @@
 import { readFile, writeFile, appendFile, mkdir } from "fs/promises";
 import { join, dirname } from "path";
-import { existsSync } from "fs";
 import { homedir } from "os";
 
 const HOME = process.env.USERPROFILE || homedir();
 const ENGINE_DIR = join(HOME, ".autonomous-engine");
+
+// Cache for confirmed directories to avoid redundant syscalls
+const knownDirs = new Set<string>();
+
+async function ensureDir(dir: string): Promise<void> {
+  if (knownDirs.has(dir)) return;
+  await mkdir(dir, { recursive: true });
+  knownDirs.add(dir);
+}
 
 export interface EngineState {
   status: string;
@@ -58,7 +66,6 @@ export interface RevenueTracker {
 async function readJson<T>(relPath: string, fallback: T): Promise<T> {
   try {
     const full = join(ENGINE_DIR, relPath);
-    if (!existsSync(full)) return fallback;
     const data = await readFile(full, "utf-8");
     return JSON.parse(data) as T;
   } catch {
@@ -69,8 +76,18 @@ async function readJson<T>(relPath: string, fallback: T): Promise<T> {
 export async function writeJson(relPath: string, data: unknown): Promise<void> {
   const full = join(ENGINE_DIR, relPath);
   const dir = dirname(full);
-  if (!existsSync(dir)) await mkdir(dir, { recursive: true });
-  await writeFile(full, JSON.stringify(data, null, 2), "utf-8");
+  await ensureDir(dir);
+  try {
+    await writeFile(full, JSON.stringify(data, null, 2), "utf-8");
+  } catch (error) {
+    if ((error as { code?: string }).code === "ENOENT") {
+      knownDirs.delete(dir);
+      await ensureDir(dir);
+      await writeFile(full, JSON.stringify(data, null, 2), "utf-8");
+    } else {
+      throw error;
+    }
+  }
 }
 
 export async function getEngineState(): Promise<EngineState> {
@@ -107,12 +124,22 @@ export async function appendLog(line: string): Promise<void> {
   const date = new Date().toISOString().split("T")[0];
   const logFile = join(ENGINE_DIR, "progress", `${date}.log`);
   const logDir = join(ENGINE_DIR, "progress");
-  if (!existsSync(logDir)) await mkdir(logDir, { recursive: true });
+  await ensureDir(logDir);
   const timestamp = new Date().toISOString();
   const entry = `[${timestamp}] ${line}\n`;
   try {
     await appendFile(logFile, entry, "utf-8");
-  } catch {
-    await writeFile(logFile, entry, "utf-8");
+  } catch (error) {
+    if ((error as { code?: string }).code === "ENOENT") {
+      knownDirs.delete(logDir);
+      await ensureDir(logDir);
+      try {
+        await appendFile(logFile, entry, "utf-8");
+      } catch {
+        await writeFile(logFile, entry, "utf-8");
+      }
+    } else {
+      await writeFile(logFile, entry, "utf-8");
+    }
   }
 }
