@@ -532,3 +532,4 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     headers: { "Content-Type": "application/x-ndjson", "Cache-Control": "no-cache" },
   });
 }
+export const runtime = 'nodejs';

@@ -596,3 +596,4 @@ Return JSON: { advice: "<2-3 sentences of actionable advice>", rating: <1-10 how
 
   return Response.json({ error: "Unknown action. Use: battle, stop, payout, add_gladiator" }, { status: 400 });
 }
+export const runtime = 'nodejs';

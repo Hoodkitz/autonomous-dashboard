@@ -215,3 +215,4 @@ export async function POST(req: NextRequest) {
   await saveLedger(ledger);
   return Response.json({ ok: true, ledger });
 }
+export const runtime = 'nodejs';
