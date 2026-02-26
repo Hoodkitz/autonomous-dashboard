@@ -1,10 +1,19 @@
 import { readFile, writeFile, appendFile, mkdir } from "fs/promises";
 import { join, dirname } from "path";
-import { existsSync } from "fs";
 import { homedir } from "os";
 
 const HOME = process.env.USERPROFILE || homedir();
 const ENGINE_DIR = join(HOME, ".autonomous-engine");
+
+// Cache for directories we've confirmed exist or created
+const knownDirs = new Set<string>();
+
+async function ensureDir(dir: string): Promise<void> {
+  if (knownDirs.has(dir)) return;
+  // mkdir with recursive: true does not throw if dir exists
+  await mkdir(dir, { recursive: true });
+  knownDirs.add(dir);
+}
 
 export interface EngineState {
   status: string;
@@ -55,13 +64,14 @@ export interface RevenueTracker {
   projects: Array<{ name: string; revenue: number; status: string }>;
 }
 
-async function readJson<T>(relPath: string, fallback: T): Promise<T> {
+export async function readJson<T>(relPath: string, fallback: T): Promise<T> {
   try {
     const full = join(ENGINE_DIR, relPath);
-    if (!existsSync(full)) return fallback;
+    // Removed synchronous existsSync check to avoid blocking I/O
     const data = await readFile(full, "utf-8");
     return JSON.parse(data) as T;
   } catch {
+    // Return fallback on any error (including ENOENT)
     return fallback;
   }
 }
@@ -69,7 +79,8 @@ async function readJson<T>(relPath: string, fallback: T): Promise<T> {
 export async function writeJson(relPath: string, data: unknown): Promise<void> {
   const full = join(ENGINE_DIR, relPath);
   const dir = dirname(full);
-  if (!existsSync(dir)) await mkdir(dir, { recursive: true });
+  // Use cached directory check
+  await ensureDir(dir);
   await writeFile(full, JSON.stringify(data, null, 2), "utf-8");
 }
 
@@ -107,12 +118,13 @@ export async function appendLog(line: string): Promise<void> {
   const date = new Date().toISOString().split("T")[0];
   const logFile = join(ENGINE_DIR, "progress", `${date}.log`);
   const logDir = join(ENGINE_DIR, "progress");
-  if (!existsSync(logDir)) await mkdir(logDir, { recursive: true });
+
+  // Use cached directory check
+  await ensureDir(logDir);
+
   const timestamp = new Date().toISOString();
   const entry = `[${timestamp}] ${line}\n`;
-  try {
-    await appendFile(logFile, entry, "utf-8");
-  } catch {
-    await writeFile(logFile, entry, "utf-8");
-  }
+
+  // appendFile creates file if not exists (checked docs)
+  await appendFile(logFile, entry, "utf-8");
 }
