@@ -364,4 +364,3 @@ function parseDiscoveries(raw: string, category: Discovery["category"]): Discove
     return [];
   }
 }
-export const runtime = 'nodejs';

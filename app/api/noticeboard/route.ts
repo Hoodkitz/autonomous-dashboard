@@ -173,7 +173,7 @@ export async function POST(req: NextRequest) {
     ];
     for (const key of fields) {
       if (key in body) {
-        (board as Record<string, unknown>)[key] = body[key];
+          (board as unknown as Record<string, unknown>)[key] = body[key];
       }
     }
   }
@@ -184,4 +184,3 @@ export async function POST(req: NextRequest) {
   await saveBoard(board);
   return Response.json({ ok: true, board });
 }
-export const runtime = 'nodejs';

@@ -17,4 +17,3 @@ export async function GET() {
     free_tier_services: vault.free_tier_services,
   });
 }
-export const runtime = 'nodejs';

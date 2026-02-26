@@ -643,4 +643,3 @@ export async function POST(req: NextRequest) {
 
   return Response.json({ error: "Unknown action. Use: swarm, run_agent, stop, evolve, add_agent" }, { status: 400 });
 }
-export const runtime = 'nodejs';

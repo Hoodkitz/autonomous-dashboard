@@ -7,4 +7,3 @@ export async function GET() {
   const state = await getEngineState();
   return NextResponse.json(state);
 }
-export const runtime = 'nodejs';

@@ -466,4 +466,3 @@ Analyze this system. What needs attention? What should be improved? What's worki
     headers: { "Content-Type": "application/x-ndjson", "Cache-Control": "no-cache" },
   });
 }
-export const runtime = 'nodejs';
