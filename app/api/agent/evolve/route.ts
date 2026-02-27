@@ -158,3 +158,5 @@ function runAgent(agent: string, prompt: string, cwd: string): Promise<{ output:
     child.on("error", (err) => resolve({ output, error: err.message, code: 1 }));
   });
 }
+
+export const runtime = "nodejs";

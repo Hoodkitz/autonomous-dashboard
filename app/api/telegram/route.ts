@@ -589,3 +589,5 @@ export async function POST(req: NextRequest) {
 
   return Response.json({ ok: true });
 }
+
+export const runtime = "nodejs";

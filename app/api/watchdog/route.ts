@@ -39,3 +39,5 @@ export async function POST(req: Request) {
 
   return Response.json({ error: "action must be 'start' or 'stop'" }, { status: 400 });
 }
+
+export const runtime = "nodejs";

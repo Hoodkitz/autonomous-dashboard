@@ -119,3 +119,5 @@ export async function POST(req: NextRequest) {
       return Response.json({ error: `Unknown action: ${action}` }, { status: 400 });
   }
 }
+
+export const runtime = "nodejs";

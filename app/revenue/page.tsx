@@ -84,3 +84,5 @@ export default async function RevenuePage() {
     </div>
   );
 }
+
+export const runtime = "nodejs";
