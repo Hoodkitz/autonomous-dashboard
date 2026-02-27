@@ -10,3 +10,5 @@ export async function GET() {
   ]);
   return NextResponse.json({ opportunities, tracker });
 }
+
+export const runtime = "nodejs";

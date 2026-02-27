@@ -198,3 +198,5 @@ Research deeply. Think beyond the obvious. Find opportunities others haven't see
     },
   });
 }
+
+export const runtime = "nodejs";
