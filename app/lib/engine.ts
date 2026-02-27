@@ -1,27 +1,6 @@
-import { readFile, writeFile, appendFile, mkdir } from "fs/promises";
-import { join, dirname } from "path";
-import { existsSync } from "fs";
-import { homedir } from "os";
-
-const HOME = process.env.USERPROFILE || homedir();
-const ENGINE_DIR = join(HOME, ".autonomous-engine");
 
 // Cache for directories we've already confirmed exist
 const knownDirs = new Set<string>();
-
-async function ensureDir(dir: string): Promise<void> {
-  if (knownDirs.has(dir)) return;
-  try {
-    await mkdir(dir, { recursive: true });
-    knownDirs.add(dir);
-  } catch (err: unknown) {
-    // If it exists, that's fine too
-    if ((err as { code?: string }).code !== "EEXIST") {
-      throw err;
-    }
-    knownDirs.add(dir);
-  }
-}
 
 export interface EngineState {
   status: string;
@@ -72,8 +51,36 @@ export interface RevenueTracker {
   projects: Array<{ name: string; revenue: number; status: string }>;
 }
 
+// Helpers to dynamically load Node.js modules only when needed
+async function getPaths() {
+  const { homedir } = await import("os");
+  const { join } = await import("path");
+  const HOME = process.env.USERPROFILE || homedir();
+  const ENGINE_DIR = join(HOME, ".autonomous-engine");
+  return { ENGINE_DIR, join };
+}
+
+async function ensureDir(dir: string): Promise<void> {
+  if (knownDirs.has(dir)) return;
+  const { mkdir } = await import("fs/promises");
+  try {
+    await mkdir(dir, { recursive: true });
+    knownDirs.add(dir);
+  } catch (err: unknown) {
+    // If it exists, that's fine too
+    if ((err as { code?: string }).code !== "EEXIST") {
+      throw err;
+    }
+    knownDirs.add(dir);
+  }
+}
+
 export async function readJson<T>(relPath: string, fallback: T): Promise<T> {
   try {
+    const { ENGINE_DIR, join } = await getPaths();
+    const { readFile } = await import("fs/promises");
+    const { existsSync } = await import("fs");
+
     const full = join(ENGINE_DIR, relPath);
     if (!existsSync(full)) return fallback;
     const data = await readFile(full, "utf-8");
@@ -84,6 +91,10 @@ export async function readJson<T>(relPath: string, fallback: T): Promise<T> {
 }
 
 export async function writeJson(relPath: string, data: unknown): Promise<void> {
+  const { ENGINE_DIR, join } = await getPaths();
+  const { dirname } = await import("path");
+  const { writeFile } = await import("fs/promises");
+
   const full = join(ENGINE_DIR, relPath);
   const dir = dirname(full);
   await ensureDir(dir);
@@ -121,6 +132,9 @@ export async function getRevenueTracker(): Promise<RevenueTracker> {
 }
 
 export async function appendLog(line: string): Promise<void> {
+  const { ENGINE_DIR, join } = await getPaths();
+  const { appendFile, writeFile } = await import("fs/promises");
+
   const date = new Date().toISOString().split("T")[0];
   const logDir = join(ENGINE_DIR, "progress");
   const logFile = join(logDir, `${date}.log`);

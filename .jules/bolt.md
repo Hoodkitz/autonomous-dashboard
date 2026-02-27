@@ -1,3 +1,3 @@
-## 2024-05-23 - Cloudflare Workers vs. Node.js FS
-**Learning:** `app/lib/engine.ts` uses Node.js-specific modules (`fs`, `path`, `os`) at the top level. When this library is imported by API routes, those routes MUST explicitly opt-in to the Node.js runtime using `export const runtime = 'nodejs';`. Otherwise, Cloudflare Workers builds (which default to Edge/Standard runtime) will fail with bundling errors for these modules.
-**Action:** When adding or modifying API routes that use `fs` or internal libraries like `engine.ts`, always ensure `export const runtime = 'nodejs';` is present.
+## 2024-05-23 - Robust Cloudflare Compatibility
+**Learning:** Even with `export const runtime = 'nodejs'`, importing Node.js-specific modules (`fs`, `os`) at the top level of a shared library can cause build failures in Cloudflare Workers if the bundler attempts to process that file in a non-Node context (e.g., shared chunks or default analysis).
+**Action:** For maximum compatibility in hybrid environments (Next.js + Cloudflare), wrap Node.js-specific imports in `await import(...)` inside functions. This prevents build-time evaluation of these modules in incompatible runtimes.
