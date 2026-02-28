@@ -3,6 +3,7 @@ import { join } from "path";
 import { getEngineState } from "../lib/engine";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 interface Story {
   id: string;

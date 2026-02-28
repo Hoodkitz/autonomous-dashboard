@@ -2,6 +2,7 @@ import { getVault } from "../lib/engine";
 import { StatusBadge } from "../components/status-badge";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export default async function VaultPage() {
   const vault = await getVault();

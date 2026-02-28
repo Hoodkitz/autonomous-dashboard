@@ -2,6 +2,7 @@ import { getOpportunities, getRevenueTracker } from "../lib/engine";
 import { StatusBadge } from "../components/status-badge";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export default async function RevenuePage() {
   const [opportunities, tracker] = await Promise.all([

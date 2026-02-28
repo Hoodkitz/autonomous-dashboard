@@ -1,26 +1,10 @@
-// Singleton cache for dynamically imported Node.js modules to bypass Edge runtime build errors
-// while avoiding severe performance regressions caused by awaiting imports on every single call.
-let fsPromises: typeof import("fs/promises") | null = null;
-let path: typeof import("path") | null = null;
-let fs: typeof import("fs") | null = null;
-let os: typeof import("os") | null = null;
+import { readFile, writeFile, appendFile, mkdir } from "fs/promises";
+import { join, dirname } from "path";
+import { existsSync } from "fs";
+import { homedir } from "os";
 
-let HOME: string = "";
-let ENGINE_DIR: string = "";
-
-async function initNodeModules() {
-  if (fsPromises && path && fs && os) return;
-
-  [fsPromises, path, fs, os] = await Promise.all([
-    import("fs/promises"),
-    import("path"),
-    import("fs"),
-    import("os")
-  ]);
-
-  HOME = process.env.USERPROFILE || os.homedir();
-  ENGINE_DIR = path.join(HOME, ".autonomous-engine");
-}
+const HOME = process.env.USERPROFILE || homedir();
+const ENGINE_DIR = join(HOME, ".autonomous-engine");
 
 const knownDirs = new Set<string>();
 
@@ -33,12 +17,12 @@ const knownDirs = new Set<string>();
  */
 async function ensureDir(dir: string): Promise<void> {
   if (knownDirs.has(dir)) return;
-  await initNodeModules();
-  if (!fs!.existsSync(dir)) {
-    await fsPromises!.mkdir(dir, { recursive: true });
+  if (!existsSync(dir)) {
+    await mkdir(dir, { recursive: true });
   }
   knownDirs.add(dir);
 }
+
 
 export interface EngineState {
   status: string;
@@ -91,10 +75,9 @@ export interface RevenueTracker {
 
 async function readJson<T>(relPath: string, fallback: T): Promise<T> {
   try {
-    await initNodeModules();
-    const full = path!.join(ENGINE_DIR, relPath);
-    if (!fs!.existsSync(full)) return fallback;
-    const data = await fsPromises!.readFile(full, "utf-8");
+    const full = join(ENGINE_DIR, relPath);
+    if (!existsSync(full)) return fallback;
+    const data = await readFile(full, "utf-8");
     return JSON.parse(data) as T;
   } catch {
     return fallback;
@@ -102,11 +85,10 @@ async function readJson<T>(relPath: string, fallback: T): Promise<T> {
 }
 
 export async function writeJson(relPath: string, data: unknown): Promise<void> {
-  await initNodeModules();
-  const full = path!.join(ENGINE_DIR, relPath);
-  const dir = path!.dirname(full);
+  const full = join(ENGINE_DIR, relPath);
+  const dir = dirname(full);
   await ensureDir(dir);
-  await fsPromises!.writeFile(full, JSON.stringify(data, null, 2), "utf-8");
+  await writeFile(full, JSON.stringify(data, null, 2), "utf-8");
 }
 
 export async function getEngineState(): Promise<EngineState> {
@@ -140,16 +122,15 @@ export async function getRevenueTracker(): Promise<RevenueTracker> {
 }
 
 export async function appendLog(line: string): Promise<void> {
-  await initNodeModules();
   const date = new Date().toISOString().split("T")[0];
-  const logFile = path!.join(ENGINE_DIR, "progress", `${date}.log`);
-  const logDir = path!.join(ENGINE_DIR, "progress");
+  const logFile = join(ENGINE_DIR, "progress", `${date}.log`);
+  const logDir = join(ENGINE_DIR, "progress");
   await ensureDir(logDir);
   const timestamp = new Date().toISOString();
   const entry = `[${timestamp}] ${line}\n`;
   try {
-    await fsPromises!.appendFile(logFile, entry, "utf-8");
+    await appendFile(logFile, entry, "utf-8");
   } catch {
-    await fsPromises!.writeFile(logFile, entry, "utf-8");
+    await writeFile(logFile, entry, "utf-8");
   }
 }

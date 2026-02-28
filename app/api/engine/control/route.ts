@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { getEngineState, updateEngineState, appendLog } from "@/app/lib/engine";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 interface ControlRequest {
   action: "start" | "pause" | "stop" | "resume" | "scan_revenue" | "scan_skills" | "scan_archives";

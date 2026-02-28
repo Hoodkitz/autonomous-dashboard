@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 const GATEWAY_HOST = process.env.OPENCLAW_GATEWAY_HOST || "127.0.0.1";
 const GATEWAY_PORT = process.env.OPENCLAW_GATEWAY_PORT || "18789";

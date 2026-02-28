@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { runPipeline, resumePipeline, loadLatestState, DEFAULT_CONFIG } from "@/app/lib/autonomous-pipeline";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 export const maxDuration = 300; // 5 min max for long pipelines
 
 // GET: Get current pipeline state

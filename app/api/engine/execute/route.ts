@@ -7,6 +7,7 @@ import { join } from "path";
 import { homedir } from "os";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 export const maxDuration = 300;
 
 const HOME = process.env.USERPROFILE || homedir();

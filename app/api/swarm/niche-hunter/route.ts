@@ -4,6 +4,7 @@ import { join } from "path";
 import { smartAI } from "@/app/lib/smart-ai";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 export const maxDuration = 300;
 
 const HOME = process.env.USERPROFILE || process.env.HOME || "~";
