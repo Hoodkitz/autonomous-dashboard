@@ -4,6 +4,7 @@ import { join } from "path";
 import { exec } from "child_process";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 const HOME = process.env.USERPROFILE || process.env.HOME || "~";
 const SKILLS_DIR = join(HOME, ".agents", "skills");

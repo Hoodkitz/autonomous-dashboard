@@ -3,6 +3,7 @@ import { readFile, writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 const HOME = process.env.USERPROFILE || process.env.HOME || "~";
 const ENGINE_DIR = join(HOME, ".autonomous-engine");
@@ -173,7 +174,7 @@ export async function POST(req: NextRequest) {
     ];
     for (const key of fields) {
       if (key in body) {
-        (board as Record<string, unknown>)[key] = body[key];
+        (board as unknown as Record<string, unknown>)[key] = body[key];
       }
     }
   }

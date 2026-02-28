@@ -3,6 +3,7 @@ import { getApiKey, chatCompletion, type ChatMessage } from "@/app/lib/openroute
 import { appendLog } from "@/app/lib/engine";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 export const maxDuration = 120;
 
 interface ChatBody {

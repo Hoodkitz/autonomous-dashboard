@@ -1,6 +1,7 @@
 import { getApiKey, getUsage } from "@/app/lib/openrouter";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function GET() {
   try {

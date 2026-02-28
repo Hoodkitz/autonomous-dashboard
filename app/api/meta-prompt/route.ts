@@ -2,6 +2,7 @@ import { getMetaState, getMetaStats, recordOutcome, shouldEvolve, evolveTemplate
 import { NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function GET() {
   const [state, stats] = await Promise.all([getMetaState(), getMetaStats()]);

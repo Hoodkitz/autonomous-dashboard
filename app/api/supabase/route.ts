@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { INIT_SQL } from "@/app/lib/supabase";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 // GET: Check Supabase connection status
 export async function GET() {

@@ -3,6 +3,7 @@ import { getApiKey, chatCompletion } from "@/app/lib/openrouter";
 import { getVault, getEngineState, getOpportunities, appendLog, writeJson } from "@/app/lib/engine";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 export const maxDuration = 120;
 
 interface ProactiveAction {
