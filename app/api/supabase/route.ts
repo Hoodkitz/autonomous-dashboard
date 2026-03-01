@@ -1,3 +1,4 @@
+export const runtime = "nodejs";
 import { NextRequest } from "next/server";
 import { INIT_SQL } from "@/app/lib/supabase";
 

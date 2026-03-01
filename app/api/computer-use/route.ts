@@ -1,3 +1,4 @@
+export const runtime = "nodejs";
 import { NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";

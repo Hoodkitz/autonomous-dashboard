@@ -1,3 +1,4 @@
+export const runtime = "nodejs";
 import { getApiKey, getUsage } from "@/app/lib/openrouter";
 
 export const dynamic = "force-dynamic";

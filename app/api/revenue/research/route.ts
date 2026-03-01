@@ -1,3 +1,4 @@
+export const runtime = "nodejs";
 import { NextRequest } from "next/server";
 import { getApiKey, chatCompletion } from "@/app/lib/openrouter";
 import { appendLog, writeJson, getOpportunities, getVault } from "@/app/lib/engine";
