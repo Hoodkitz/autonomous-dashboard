@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 interface NavItem {
   href: string;
@@ -64,6 +64,13 @@ interface AgentStatus {
   status: "online" | "offline" | "error";
 }
 
+// ⚡ Bolt: Move static color mapping outside render loop
+const statusColor: Record<string, string> = {
+  online: "bg-success",
+  offline: "bg-muted",
+  error: "bg-danger",
+};
+
 export function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
@@ -99,15 +106,21 @@ export function Sidebar() {
     });
   }
 
-  function groupHasActive(group: NavGroup) {
-    return group.items.some((item) => pathname === item.href);
-  }
-
-  const statusColor: Record<string, string> = {
-    online: "bg-success",
-    offline: "bg-muted",
-    error: "bg-danger",
-  };
+  // ⚡ Bolt: useMemo to cache navigation group processing to avoid constant array
+  // mapping and .some() iterations on every render unless pathname changes
+  const processedGroups = useMemo(() => {
+    return navGroups.map(group => {
+      const hasActive = group.items.some((item) => pathname === item.href);
+      return {
+        ...group,
+        hasActive,
+        itemsWithState: group.items.map(item => ({
+          ...item,
+          isActive: pathname === item.href
+        }))
+      };
+    });
+  }, [pathname]);
 
   const isHome = pathname === "/";
 
@@ -147,9 +160,8 @@ export function Sidebar() {
 
       {/* Grouped navigation */}
       <nav className="flex-1 px-2 pb-2 overflow-y-auto sidebar-scroll">
-        {navGroups.map((group) => {
-          const hasActive = groupHasActive(group);
-          const isCollapsed = collapsed[group.key] && !hasActive;
+        {processedGroups.map((group) => {
+          const isCollapsed = collapsed[group.key] && !group.hasActive;
 
           return (
             <div key={group.key} className="mt-3 first:mt-2">
@@ -157,7 +169,7 @@ export function Sidebar() {
               <button
                 onClick={() => toggleGroup(group.key)}
                 className={`w-full flex items-center justify-between px-3 py-1 text-[10px] font-semibold uppercase tracking-widest rounded transition-colors ${
-                  hasActive ? "text-accent" : "text-muted hover:text-foreground"
+                  group.hasActive ? "text-accent" : "text-muted hover:text-foreground"
                 }`}
               >
                 <span>{group.label}</span>
@@ -180,20 +192,19 @@ export function Sidebar() {
                   isCollapsed ? "max-h-0 opacity-0" : "max-h-96 opacity-100"
                 }`}
               >
-                {group.items.map((item) => {
-                  const isActive = pathname === item.href;
+                {group.itemsWithState.map((item) => {
                   return (
                     <Link
                       key={item.href}
                       href={item.href}
                       className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm transition-all ${
-                        isActive
+                        item.isActive
                           ? "bg-accent-dim text-accent shadow-sm shadow-accent/5"
                           : "text-muted hover:text-foreground hover:bg-card"
                       }`}
                     >
                       <span className={`w-5 h-5 rounded text-[10px] font-bold flex items-center justify-center shrink-0 ${
-                        isActive ? "bg-accent text-background" : "bg-card-border text-muted"
+                        item.isActive ? "bg-accent text-background" : "bg-card-border text-muted"
                       }`}>
                         {item.icon}
                       </span>

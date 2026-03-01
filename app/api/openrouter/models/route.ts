@@ -1,3 +1,4 @@
+export const runtime = "nodejs";
 import { listModels } from "@/app/lib/openrouter";
 
 export const dynamic = "force-dynamic";

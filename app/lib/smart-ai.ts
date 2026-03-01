@@ -1,3 +1,4 @@
+export const runtime = "nodejs";
 /**
  * Smart AI Call - Uses the smart router for all AI calls.
  * Auto-selects best model, retries on failure, tracks usage.

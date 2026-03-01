@@ -1,3 +1,4 @@
+export const runtime = "nodejs";
 import { NextRequest } from "next/server";
 import { readFile, writeFile, mkdir } from "fs/promises";
 import { join } from "path";
@@ -173,7 +174,7 @@ export async function POST(req: NextRequest) {
     ];
     for (const key of fields) {
       if (key in body) {
-        (board as Record<string, unknown>)[key] = body[key];
+        (board as unknown as Record<string, unknown>)[key] = body[key];
       }
     }
   }

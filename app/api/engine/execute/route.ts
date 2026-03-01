@@ -1,3 +1,4 @@
+export const runtime = "nodejs";
 import { NextRequest } from "next/server";
 import { spawn } from "child_process";
 import { appendLog, updateEngineState, getEngineState, writeJson } from "@/app/lib/engine";

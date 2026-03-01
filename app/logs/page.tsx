@@ -1,3 +1,4 @@
+export const runtime = "nodejs";
 import { readdirSync, readFileSync, existsSync, statSync } from "fs";
 import { join } from "path";
 

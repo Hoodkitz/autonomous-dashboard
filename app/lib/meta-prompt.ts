@@ -1,3 +1,4 @@
+export const runtime = "nodejs";
 /**
  * AIXI-Inspired Self-Improving Meta-Prompting System
  *
