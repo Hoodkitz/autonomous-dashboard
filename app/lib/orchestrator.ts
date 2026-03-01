@@ -1,3 +1,4 @@
+export const runtime = "nodejs";
 import { spawn } from "child_process";
 import { getApiKey, chatCompletion, type ChatMessage } from "./openrouter";
 import { appendLog, updateEngineState, getVault } from "./engine";

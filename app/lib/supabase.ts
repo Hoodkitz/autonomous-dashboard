@@ -1,3 +1,4 @@
+export const runtime = "nodejs";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { readFile } from "fs/promises";
 import { join } from "path";

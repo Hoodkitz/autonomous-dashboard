@@ -1,3 +1,4 @@
+export const runtime = "nodejs";
 import { readFile } from "fs/promises";
 import { join } from "path";
 import { homedir } from "os";
