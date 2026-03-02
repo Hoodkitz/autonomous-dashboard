@@ -1,6 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+
+export const runtime = "nodejs";
+
 
 interface AgentType {
   id: string;
@@ -249,6 +252,18 @@ export default function SwarmPage() {
     fetchStatus();
   }
 
+  // Memoize agentsByDomain to prevent building the Map on every streaming render
+  const agentsByDomain = useMemo(() => {
+    const map = new Map<string, AgentType[]>();
+    if (!status) return map;
+    for (const a of status.agentTypes) {
+      const group = map.get(a.domain) || [];
+      group.push(a);
+      map.set(a.domain, group);
+    }
+    return map;
+  }, [status?.agentTypes]);
+
   if (!status) {
     return (
       <div className="p-6">
@@ -256,13 +271,6 @@ export default function SwarmPage() {
         <p className="text-muted mt-2">Loading...</p>
       </div>
     );
-  }
-
-  const agentsByDomain = new Map<string, AgentType[]>();
-  for (const a of status.agentTypes) {
-    const group = agentsByDomain.get(a.domain) || [];
-    group.push(a);
-    agentsByDomain.set(a.domain, group);
   }
 
   return (

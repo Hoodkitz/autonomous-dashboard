@@ -2,6 +2,9 @@
 
 import { useState, useEffect, useMemo } from "react";
 
+export const runtime = "nodejs";
+
+
 interface Model {
   id: string;
   name: string;

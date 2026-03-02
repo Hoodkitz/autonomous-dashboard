@@ -2,6 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 
+export const runtime = "nodejs";
+
+
 interface CostEntry {
   date: string;
   category: string;

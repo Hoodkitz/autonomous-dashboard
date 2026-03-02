@@ -2,6 +2,9 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 
+export const runtime = "nodejs";
+
+
 type Agent = "claude" | "gemini" | "openclaw" | "openrouter" | "orchestrate";
 
 interface Message {

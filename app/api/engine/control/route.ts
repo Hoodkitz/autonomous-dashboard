@@ -1,6 +1,9 @@
 import { NextRequest } from "next/server";
 import { getEngineState, updateEngineState, appendLog } from "@/app/lib/engine";
 
+export const runtime = "nodejs";
+
+
 export const dynamic = "force-dynamic";
 
 interface ControlRequest {

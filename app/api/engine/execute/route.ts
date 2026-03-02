@@ -6,6 +6,9 @@ import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
 
+export const runtime = "nodejs";
+
+
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
