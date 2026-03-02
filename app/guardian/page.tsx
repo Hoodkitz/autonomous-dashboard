@@ -2,6 +2,9 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 
+export const runtime = "nodejs";
+
+
 interface HealthCheck {
   id: string;
   name: string;

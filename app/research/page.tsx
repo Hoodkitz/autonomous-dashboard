@@ -2,6 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 
+export const runtime = "nodejs";
+
+
 interface Discovery {
   id: string;
   foundAt: string;

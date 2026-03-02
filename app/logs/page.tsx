@@ -1,6 +1,9 @@
 import { readdirSync, readFileSync, existsSync, statSync } from "fs";
 import { join } from "path";
 
+export const runtime = "nodejs";
+
+
 export const dynamic = "force-dynamic";
 
 interface LogEntry {

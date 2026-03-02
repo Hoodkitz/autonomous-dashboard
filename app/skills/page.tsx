@@ -1,6 +1,9 @@
 import { readdirSync, readFileSync, existsSync } from "fs";
 import { join } from "path";
 
+export const runtime = "nodejs";
+
+
 export const dynamic = "force-dynamic";
 
 interface SkillInfo {
