@@ -393,6 +393,9 @@ Start with "use client"; and export default function LandingPage().`;
         await writeFile(join(deployDir, "app", "layout.tsx"), `import type { Metadata } from "next";
 import "./globals.css";
 
+export const runtime = "nodejs";
+
+
 export const metadata: Metadata = {
   title: "${researchData.name} - ${researchData.tagline}",
   description: "${researchData.problem}",

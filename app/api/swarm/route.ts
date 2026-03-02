@@ -3,6 +3,9 @@ import { readFile, writeFile, mkdir, readdir } from "fs/promises";
 import { join } from "path";
 import { smartAI } from "@/app/lib/smart-ai";
 
+export const runtime = "nodejs";
+
+
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
