@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { spawn } from "child_process";
-import { appendLog, updateEngineState } from "@/app/lib/engine";
+import { appendLog, updateEngineState, getSafeCommand } from "@/app/lib/engine";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -47,9 +47,9 @@ export async function POST(req: NextRequest) {
   const stream = new ReadableStream({
     start(controller) {
       const cwd = workDir || process.env.USERPROFILE || "C:\\Users\\Administrator";
-      const child = spawn(config.cmd, config.args(prompt), {
+      const child = spawn(getSafeCommand(config.cmd), config.args(prompt), {
         cwd,
-        shell: true,
+        shell: false,
         env: { ...process.env, FORCE_COLOR: "0" },
       });
 
@@ -83,9 +83,9 @@ export async function POST(req: NextRequest) {
 
           // Self-debug: re-run with error context
           const debugPrompt = `The previous command failed with this error:\n\n${errorOutput.slice(0, 2000)}\n\nOriginal task: ${prompt}\n\nAnalyze the error and fix it. Provide the corrected approach.`;
-          const debugChild = spawn(config.cmd, config.args(debugPrompt), {
+          const debugChild = spawn(getSafeCommand(config.cmd), config.args(debugPrompt), {
             cwd,
-            shell: true,
+            shell: false,
             env: { ...process.env, FORCE_COLOR: "0" },
           });
 

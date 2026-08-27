@@ -1,6 +1,6 @@
 import { spawn } from "child_process";
 import { getApiKey, chatCompletion, type ChatMessage } from "./openrouter";
-import { appendLog, updateEngineState, getVault } from "./engine";
+import { appendLog, updateEngineState, getVault, getSafeCommand } from "./engine";
 
 // All available capabilities the orchestrator can use
 export interface Capability {
@@ -63,8 +63,8 @@ export function runCliAgent(agent: string, prompt: string, cwd: string): Promise
   return new Promise((resolve) => {
     let output = "";
     let error = "";
-    const child = spawn(config.cmd, config.args(prompt), {
-      cwd, shell: true,
+    const child = spawn(getSafeCommand(config.cmd), config.args(prompt), {
+      cwd, shell: false,
       env: { ...process.env, FORCE_COLOR: "0" },
     });
     child.stdout?.on("data", (c: Buffer) => { output += c.toString(); });

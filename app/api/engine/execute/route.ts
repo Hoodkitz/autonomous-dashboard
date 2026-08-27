@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { spawn } from "child_process";
-import { appendLog, updateEngineState, getEngineState, writeJson } from "@/app/lib/engine";
+import { appendLog, updateEngineState, getEngineState, writeJson, getSafeCommand } from "@/app/lib/engine";
 import { generatePrompt, recordOutcome, shouldEvolve, evolveTemplate, applyEvolution } from "@/app/lib/meta-prompt";
 import { readFileSync, existsSync } from "fs";
 import { join } from "path";
@@ -32,9 +32,9 @@ function runAgent(
     const cfg = cmds[agent] || cmds.claude;
     let output = "";
     let error = "";
-    const child = spawn(cfg.cmd, cfg.args, {
+    const child = spawn(getSafeCommand(cfg.cmd), cfg.args, {
       cwd,
-      shell: true,
+      shell: false,
       env: { ...process.env, FORCE_COLOR: "0" },
     });
     child.stdout?.on("data", (c: Buffer) => { output += c.toString(); });

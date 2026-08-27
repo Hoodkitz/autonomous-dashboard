@@ -116,3 +116,16 @@ export async function appendLog(line: string): Promise<void> {
     await writeFile(logFile, entry, "utf-8");
   }
 }
+
+/**
+ * Returns a safe command for cross-platform execution.
+ * Appends .cmd on Windows for specific CLI tools that are often implemented as batch files.
+ */
+export function getSafeCommand(cmd: string): string {
+  if (process.platform !== "win32") return cmd;
+  const windowsBatchCmds = ["claude", "gemini", "openclaw", "npx"];
+  if (windowsBatchCmds.includes(cmd.toLowerCase())) {
+    return `${cmd}.cmd`;
+  }
+  return cmd;
+}

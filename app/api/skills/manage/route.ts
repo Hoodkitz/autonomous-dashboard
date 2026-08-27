@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
 import { readdir, readFile } from "fs/promises";
 import { join } from "path";
-import { exec } from "child_process";
+import { execFile } from "child_process";
+import { getSafeCommand } from "@/app/lib/engine";
 
 export const dynamic = "force-dynamic";
 
@@ -144,7 +145,7 @@ export async function POST(req: NextRequest) {
   if (action === "search") {
     const query = body.query || "";
     return new Promise<Response>((resolve) => {
-      exec(`npx skills find "${query}"`, { timeout: 30000 }, (err, stdout, stderr) => {
+      execFile(getSafeCommand("npx"), ["skills", "find", query], { timeout: 30000, shell: false }, (err, stdout, stderr) => {
         resolve(Response.json({
           ok: !err,
           results: stdout,
@@ -158,7 +159,7 @@ export async function POST(req: NextRequest) {
     const skill = body.skill || "";
     if (!skill) return Response.json({ error: "skill identifier required" }, { status: 400 });
     return new Promise<Response>((resolve) => {
-      exec(`npx skills add ${skill} -g -y`, { timeout: 60000 }, (err, stdout, stderr) => {
+      execFile(getSafeCommand("npx"), ["skills", "add", skill, "-g", "-y"], { timeout: 60000, shell: false }, (err, stdout, stderr) => {
         resolve(Response.json({
           ok: !err,
           output: stdout,

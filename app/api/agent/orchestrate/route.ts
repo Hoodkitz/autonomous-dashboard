@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { spawn } from "child_process";
-import { appendLog, updateEngineState } from "@/app/lib/engine";
+import { appendLog, updateEngineState, getSafeCommand } from "@/app/lib/engine";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -14,7 +14,7 @@ function runAgent(agent: string, cmd: string, args: string[], cwd: string): Prom
   return new Promise((resolve) => {
     let output = "";
     let error = "";
-    const child = spawn(cmd, args, { cwd, shell: true, env: { ...process.env, FORCE_COLOR: "0" } });
+    const child = spawn(getSafeCommand(cmd), args, { cwd, shell: false, env: { ...process.env, FORCE_COLOR: "0" } });
 
     child.stdout?.on("data", (c: Buffer) => { output += c.toString(); });
     child.stderr?.on("data", (c: Buffer) => { error += c.toString(); });
