@@ -35,6 +35,73 @@ interface ResearchState {
   categories: Record<string, number>;
 }
 
+const SCAN_CONFIGS: Record<string, { prompt: string; category: Discovery["category"] }> = {
+  scan_skills: {
+    category: "skill",
+    prompt: `You are a research agent for an autonomous AI development engine. The engine has 70+ "antigravity" skills installed for Claude Code (AI coding agent).
+
+Current installed categories: AI Agents, Web/Frontend, Backend, Deployment, Marketing/Revenue, Testing, DevOps.
+
+Search your knowledge for additional skills, plugins, or extensions that would be valuable. Focus on:
+1. Skills for REVENUE GENERATION (building SaaS, payments, marketing automation)
+2. Skills for DEPLOYMENT (serverless, edge functions, CDN)
+3. Skills for MONITORING (error tracking, analytics, uptime)
+4. Skills for DATABASE (migrations, ORMs, caching)
+5. Skills for SECURITY (auth, encryption, compliance)
+
+For each, provide a JSON array of objects with: name, description, valueScore (1-10), effort (low/medium/high), cost (free/freemium/paid), relevance (why it matters), installCommand (if available), tags.
+
+Return ONLY the JSON array, no other text. Max 15 items, sorted by value.`,
+  },
+  scan_tools: {
+    category: "tool",
+    prompt: `You are a research agent. Find the most valuable FREE developer tools and CLIs that would enhance an autonomous AI coding engine. The engine runs on Windows, uses Node.js/Next.js/TypeScript, and builds SaaS products.
+
+Focus on:
+1. CLI tools for productivity (build, test, deploy faster)
+2. Code generation tools
+3. API testing tools
+4. Database management tools
+5. Performance/monitoring tools
+6. Free alternatives to paid tools
+
+Return a JSON array of objects with: name, description, valueScore (1-10), effort (low/medium/high), cost (free/freemium/paid), relevance, url, tags.
+
+Return ONLY the JSON array, no other text. Max 15 items, sorted by value.`,
+  },
+  scan_apis: {
+    category: "api",
+    prompt: `You are a research agent. Find the most valuable FREE APIs that an autonomous AI engine could use to build revenue-generating products. The engine builds SaaS products, bots, and automation tools.
+
+Focus on:
+1. AI/ML APIs with free tiers (not OpenAI/Anthropic - already have those)
+2. Data APIs (weather, finance, news, social media)
+3. Communication APIs (email, SMS, push notifications) with free tiers
+4. Payment/billing APIs
+5. Analytics and tracking APIs
+6. Image/video processing APIs with free tiers
+
+Return a JSON array of objects with: name, description, valueScore (1-10), effort (low/medium/high), cost (free/freemium/paid), relevance, url, tags.
+
+Return ONLY the JSON array, no other text. Max 15 items, sorted by value.`,
+  },
+  scan_plugins: {
+    category: "plugin",
+    prompt: `You are a research agent. Find the most valuable plugins, extensions, and integrations for Claude Code (Anthropic's AI coding CLI) and MCP (Model Context Protocol) servers.
+
+Focus on:
+1. MCP servers that provide useful tools (filesystem, database, browser, API access)
+2. Claude Code hooks and custom commands
+3. VS Code extensions that work with AI agents
+4. Browser extensions for AI development
+5. GitHub Apps/Actions for AI-powered workflows
+
+Return a JSON array of objects with: name, description, valueScore (1-10), effort (low/medium/high), cost (free/freemium/paid), relevance, installCommand (if any), url, tags.
+
+Return ONLY the JSON array, no other text. Max 15 items, sorted by value.`,
+  },
+};
+
 function defaultState(): ResearchState {
   return {
     updatedAt: new Date().toISOString(),
@@ -89,6 +156,14 @@ async function aiResearch(prompt: string): Promise<string> {
   return data.choices?.[0]?.message?.content || "No response";
 }
 
+async function performScan(scanType: string): Promise<Discovery[]> {
+  const config = SCAN_CONFIGS[scanType];
+  if (!config) return [];
+
+  const result = await aiResearch(config.prompt);
+  return parseDiscoveries(result, config.category);
+}
+
 // GET: Return discovered tools/skills/plugins
 export async function GET(req: NextRequest) {
   const state = await loadState();
@@ -123,16 +198,6 @@ export async function GET(req: NextRequest) {
 }
 
 // POST: Run research scans or manage discoveries
-// Actions:
-//   scan_skills: Search for new antigravity skills to install
-//   scan_tools: Search for useful developer tools and CLIs
-//   scan_apis: Search for free APIs that add value
-//   scan_plugins: Search for Claude Code / AI agent plugins
-//   scan_all: Run all scans
-//   evaluate: AI evaluates which discoveries are most valuable { action: "evaluate" }
-//   add: Manually add a discovery { action: "add", ...discovery }
-//   update_status: { action: "update_status", id, status }
-//   clear: Remove all rejected items
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
   const action = body.action as string;
@@ -141,123 +206,38 @@ export async function POST(req: NextRequest) {
 
   const state = await loadState();
 
+  if (action.startsWith("scan_") && action !== "scan_all") {
+    const discoveries = await performScan(action);
+    state.discoveries.push(...discoveries);
+    state.lastScanAt = new Date().toISOString();
+    await saveState(state);
+    return Response.json({ ok: true, found: discoveries.length, discoveries });
+  }
+
   switch (action) {
-    case "scan_skills": {
-      const prompt = `You are a research agent for an autonomous AI development engine. The engine has 70+ "antigravity" skills installed for Claude Code (AI coding agent).
-
-Current installed categories: AI Agents, Web/Frontend, Backend, Deployment, Marketing/Revenue, Testing, DevOps.
-
-Search your knowledge for additional skills, plugins, or extensions that would be valuable. Focus on:
-1. Skills for REVENUE GENERATION (building SaaS, payments, marketing automation)
-2. Skills for DEPLOYMENT (serverless, edge functions, CDN)
-3. Skills for MONITORING (error tracking, analytics, uptime)
-4. Skills for DATABASE (migrations, ORMs, caching)
-5. Skills for SECURITY (auth, encryption, compliance)
-
-For each, provide a JSON array of objects with: name, description, valueScore (1-10), effort (low/medium/high), cost (free/freemium/paid), relevance (why it matters), installCommand (if available), tags.
-
-Return ONLY the JSON array, no other text. Max 15 items, sorted by value.`;
-
-      const result = await aiResearch(prompt);
-      const discoveries = parseDiscoveries(result, "skill");
-      state.discoveries.push(...discoveries);
-      state.lastScanAt = new Date().toISOString();
-      await saveState(state);
-      return Response.json({ ok: true, found: discoveries.length, discoveries });
-    }
-
-    case "scan_tools": {
-      const prompt = `You are a research agent. Find the most valuable FREE developer tools and CLIs that would enhance an autonomous AI coding engine. The engine runs on Windows, uses Node.js/Next.js/TypeScript, and builds SaaS products.
-
-Focus on:
-1. CLI tools for productivity (build, test, deploy faster)
-2. Code generation tools
-3. API testing tools
-4. Database management tools
-5. Performance/monitoring tools
-6. Free alternatives to paid tools
-
-Return a JSON array of objects with: name, description, valueScore (1-10), effort (low/medium/high), cost (free/freemium/paid), relevance, url, tags.
-
-Return ONLY the JSON array, no other text. Max 15 items, sorted by value.`;
-
-      const result = await aiResearch(prompt);
-      const discoveries = parseDiscoveries(result, "tool");
-      state.discoveries.push(...discoveries);
-      state.lastScanAt = new Date().toISOString();
-      await saveState(state);
-      return Response.json({ ok: true, found: discoveries.length, discoveries });
-    }
-
-    case "scan_apis": {
-      const prompt = `You are a research agent. Find the most valuable FREE APIs that an autonomous AI engine could use to build revenue-generating products. The engine builds SaaS products, bots, and automation tools.
-
-Focus on:
-1. AI/ML APIs with free tiers (not OpenAI/Anthropic - already have those)
-2. Data APIs (weather, finance, news, social media)
-3. Communication APIs (email, SMS, push notifications) with free tiers
-4. Payment/billing APIs
-5. Analytics and tracking APIs
-6. Image/video processing APIs with free tiers
-
-Return a JSON array of objects with: name, description, valueScore (1-10), effort (low/medium/high), cost (free/freemium/paid), relevance, url, tags.
-
-Return ONLY the JSON array, no other text. Max 15 items, sorted by value.`;
-
-      const result = await aiResearch(prompt);
-      const discoveries = parseDiscoveries(result, "api");
-      state.discoveries.push(...discoveries);
-      state.lastScanAt = new Date().toISOString();
-      await saveState(state);
-      return Response.json({ ok: true, found: discoveries.length, discoveries });
-    }
-
-    case "scan_plugins": {
-      const prompt = `You are a research agent. Find the most valuable plugins, extensions, and integrations for Claude Code (Anthropic's AI coding CLI) and MCP (Model Context Protocol) servers.
-
-Focus on:
-1. MCP servers that provide useful tools (filesystem, database, browser, API access)
-2. Claude Code hooks and custom commands
-3. VS Code extensions that work with AI agents
-4. Browser extensions for AI development
-5. GitHub Apps/Actions for AI-powered workflows
-
-Return a JSON array of objects with: name, description, valueScore (1-10), effort (low/medium/high), cost (free/freemium/paid), relevance, installCommand (if any), url, tags.
-
-Return ONLY the JSON array, no other text. Max 15 items, sorted by value.`;
-
-      const result = await aiResearch(prompt);
-      const discoveries = parseDiscoveries(result, "plugin");
-      state.discoveries.push(...discoveries);
-      state.lastScanAt = new Date().toISOString();
-      await saveState(state);
-      return Response.json({ ok: true, found: discoveries.length, discoveries });
-    }
-
     case "scan_all": {
-      // Run all scans sequentially
+      const scanTypes = Object.keys(SCAN_CONFIGS);
+      const results = await Promise.allSettled(scanTypes.map(type => performScan(type)));
+
       const allDiscoveries: Discovery[] = [];
-      for (const scanType of ["scan_skills", "scan_tools", "scan_apis", "scan_plugins"]) {
-        try {
-          const subRes = await POST(new NextRequest(`http://localhost/api/research`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: scanType }),
-          }));
-          const subData = await subRes.json();
-          if (subData.discoveries) allDiscoveries.push(...subData.discoveries);
-        } catch { /* continue with other scans */ }
-      }
-      // Reload state after all scans wrote to it
-      const freshState = await loadState();
+      results.forEach((result) => {
+        if (result.status === "fulfilled") {
+          allDiscoveries.push(...result.value);
+        }
+      });
+
+      state.discoveries.push(...allDiscoveries);
+      state.lastScanAt = new Date().toISOString();
+      await saveState(state);
+
       return Response.json({
         ok: true,
         totalFound: allDiscoveries.length,
         discoveries: allDiscoveries,
         summary: {
-          total: freshState.discoveries.length,
-          new: freshState.discoveries.filter((d) => d.status === "new").length,
-          highValue: freshState.discoveries.filter((d) => d.valueScore >= 8).length,
+          total: state.discoveries.length,
+          new: state.discoveries.filter((d) => d.status === "new").length,
+          highValue: state.discoveries.filter((d) => d.valueScore >= 8).length,
         },
       });
     }
@@ -299,7 +279,7 @@ Return ONLY the JSON array.`;
 
     case "add": {
       const discovery: Discovery = {
-        id: `d-${Date.now()}`,
+        id: `d-${body.category || "tool"}-${Date.now()}`,
         foundAt: new Date().toISOString(),
         category: body.category || "tool",
         name: body.name || "",
@@ -346,7 +326,7 @@ function parseDiscoveries(raw: string, category: Discovery["category"]): Discove
     if (!jsonMatch) return [];
     const items = JSON.parse(jsonMatch[0]);
     return items.map((item: Record<string, unknown>, i: number) => ({
-      id: `d-${Date.now()}-${i}`,
+      id: `d-${category}-${Date.now()}-${i}`,
       foundAt: new Date().toISOString(),
       category,
       name: item.name || "",
