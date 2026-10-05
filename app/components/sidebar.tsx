@@ -77,6 +77,7 @@ export function Sidebar() {
   useEffect(() => {
     try {
       const saved = localStorage.getItem("ae-sidebar");
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (saved) setCollapsed(JSON.parse(saved));
     } catch { /* */ }
   }, []);

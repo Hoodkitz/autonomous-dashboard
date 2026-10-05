@@ -447,7 +447,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Context accumulator - each agent's output feeds the next
-        let context: Record<string, unknown> = {};
+        const context: Record<string, unknown> = {};
         const cycleDir = join(SWARM_DIR, `cycle-${swarm.cycle}`);
         await mkdir(cycleDir, { recursive: true });
 
