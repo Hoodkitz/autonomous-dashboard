@@ -87,6 +87,7 @@ export default function ArenaPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     fetchArena();
     const interval = setInterval(fetchArena, 5000);
     return () => clearInterval(interval);
