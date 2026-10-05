@@ -23,6 +23,33 @@ export default function TelegramPage() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [step, setStep] = useState(0); // setup wizard step
 
+  // Defined before fetchState to avoid hoisting issues with static analysis
+  const startPolling = useCallback(() => {
+    if (pollRef.current) return;
+    setPolling(true);
+    pollRef.current = setInterval(async () => {
+      try {
+        const res = await fetch("/api/telegram", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "poll" }),
+        });
+        const data = await res.json();
+        if (data.messages > 0) {
+          setPollCount((c) => c + data.messages);
+        }
+      } catch { /* */ }
+    }, 3000);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const stopPolling = useCallback(() => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+    setPolling(false);
+  }, []);
+
   const fetchState = useCallback(async () => {
     try {
       const res = await fetch("/api/telegram");
@@ -32,7 +59,7 @@ export default function TelegramPage() {
         if (data.pollingActive && !pollRef.current) startPolling();
       }
     } catch { /* */ }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [startPolling]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     fetchState();
@@ -51,33 +78,6 @@ export default function TelegramPage() {
     else if (!tg.active) setStep(2);
     else setStep(3); // All set
   }, [tg]);
-
-  function startPolling() {
-    if (pollRef.current) return;
-    setPolling(true);
-    pollRef.current = setInterval(async () => {
-      try {
-        const res = await fetch("/api/telegram", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "poll" }),
-        });
-        const data = await res.json();
-        if (data.messages > 0) {
-          setPollCount((c) => c + data.messages);
-          fetchState(); // Refresh state to show new commands
-        }
-      } catch { /* */ }
-    }, 3000);
-  }
-
-  function stopPolling() {
-    if (pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
-    }
-    setPolling(false);
-  }
 
   async function togglePolling() {
     await fetch("/api/telegram", {
