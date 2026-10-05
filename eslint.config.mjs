@@ -19,6 +19,7 @@ const eslintConfig = defineConfig([
       "react-hooks/set-state-in-effect": "off",
       "@typescript-eslint/no-use-before-define": "off",
       "no-use-before-define": "off",
+      "react-compiler/react-compiler": "off",
       // Common intentional patterns
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-unused-vars": "warn",
