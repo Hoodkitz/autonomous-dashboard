@@ -118,3 +118,5 @@ export default async function TasksPage() {
     </div>
   );
 }
+
+export const runtime = 'nodejs';

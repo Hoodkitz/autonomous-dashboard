@@ -107,3 +107,5 @@ export async function POST(req: NextRequest) {
     headers: { "Content-Type": "application/x-ndjson", "Transfer-Encoding": "chunked" },
   });
 }
+
+export const runtime = 'nodejs';
