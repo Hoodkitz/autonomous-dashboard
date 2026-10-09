@@ -1,11 +1,3 @@
-import { readFile, writeFile, appendFile, mkdir } from "fs/promises";
-import { join, dirname } from "path";
-import { existsSync } from "fs";
-import { homedir } from "os";
-
-const HOME = process.env.USERPROFILE || homedir();
-const ENGINE_DIR = join(HOME, ".autonomous-engine");
-
 export interface EngineState {
   status: string;
   phase: string | null;
@@ -55,10 +47,42 @@ export interface RevenueTracker {
   projects: Array<{ name: string; revenue: number; status: string }>;
 }
 
+// Internal cache for known directories
+const knownDirs = new Set<string>();
+
+// Dynamic Import Helpers to avoid static analysis issues on Edge/Cloudflare
+async function getFs() {
+  return import("fs/promises");
+}
+async function getPath() {
+  return import("path");
+}
+async function getOs() {
+  return import("os");
+}
+
+async function getEngineDir() {
+  const { homedir } = await getOs();
+  const { join } = await getPath();
+  const HOME = process.env.USERPROFILE || homedir();
+  return join(HOME, ".autonomous-engine");
+}
+
+async function ensureDir(dir: string) {
+  if (knownDirs.has(dir)) return;
+  const { mkdir } = await getFs();
+  await mkdir(dir, { recursive: true });
+  knownDirs.add(dir);
+}
+
 async function readJson<T>(relPath: string, fallback: T): Promise<T> {
   try {
+    const { join } = await getPath();
+    const { readFile } = await getFs();
+    const ENGINE_DIR = await getEngineDir();
+
     const full = join(ENGINE_DIR, relPath);
-    if (!existsSync(full)) return fallback;
+    // Optimized: Direct read with try/catch avoids blocking existsSync
     const data = await readFile(full, "utf-8");
     return JSON.parse(data) as T;
   } catch {
@@ -67,10 +91,26 @@ async function readJson<T>(relPath: string, fallback: T): Promise<T> {
 }
 
 export async function writeJson(relPath: string, data: unknown): Promise<void> {
+  const { join, dirname } = await getPath();
+  const { writeFile } = await getFs();
+  const ENGINE_DIR = await getEngineDir();
+
   const full = join(ENGINE_DIR, relPath);
   const dir = dirname(full);
-  if (!existsSync(dir)) await mkdir(dir, { recursive: true });
-  await writeFile(full, JSON.stringify(data, null, 2), "utf-8");
+
+  await ensureDir(dir);
+  try {
+    await writeFile(full, JSON.stringify(data, null, 2), "utf-8");
+  } catch (error) {
+    // Resilience: If directory was deleted externally, clear cache and retry
+    if ((error as { code?: string }).code === 'ENOENT') {
+      knownDirs.delete(dir);
+      await ensureDir(dir);
+      await writeFile(full, JSON.stringify(data, null, 2), "utf-8");
+    } else {
+      throw error;
+    }
+  }
 }
 
 export async function getEngineState(): Promise<EngineState> {
@@ -104,15 +144,36 @@ export async function getRevenueTracker(): Promise<RevenueTracker> {
 }
 
 export async function appendLog(line: string): Promise<void> {
+  const { join } = await getPath();
+  const { appendFile, writeFile } = await getFs();
+  const ENGINE_DIR = await getEngineDir();
+
   const date = new Date().toISOString().split("T")[0];
   const logFile = join(ENGINE_DIR, "progress", `${date}.log`);
   const logDir = join(ENGINE_DIR, "progress");
-  if (!existsSync(logDir)) await mkdir(logDir, { recursive: true });
+
+  await ensureDir(logDir);
   const timestamp = new Date().toISOString();
   const entry = `[${timestamp}] ${line}\n`;
   try {
     await appendFile(logFile, entry, "utf-8");
-  } catch {
-    await writeFile(logFile, entry, "utf-8");
+  } catch (error) {
+    // Resilience: If directory was deleted externally, clear cache and retry
+    if ((error as { code?: string }).code === 'ENOENT') {
+      knownDirs.delete(logDir);
+      await ensureDir(logDir);
+      try {
+        await appendFile(logFile, entry, "utf-8");
+      } catch {
+        await writeFile(logFile, entry, "utf-8");
+      }
+    } else {
+      // If append fails for another reason, try write (create)
+      try {
+        await writeFile(logFile, entry, "utf-8");
+      } catch {
+        // Ignored
+      }
+    }
   }
 }
