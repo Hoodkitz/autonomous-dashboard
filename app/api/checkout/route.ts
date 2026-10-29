@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolveSafeRedirect } from "../../lib/safe-redirect";
 import { getStripe, PRICE_IDS, type PlanId } from "../../lib/stripe";
 
 const VALID_PLANS: PlanId[] = ["starter", "pro", "enterprise"];
@@ -20,6 +21,7 @@ export async function POST(req: NextRequest) {
     }
 
     const priceId = PRICE_IDS[plan];
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
     const session = await getStripe().checkout.sessions.create({
       mode: "subscription",
@@ -30,12 +32,12 @@ export async function POST(req: NextRequest) {
           quantity: 1,
         },
       ],
-      success_url:
-        successUrl ||
-        `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url:
-        cancelUrl ||
-        `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/pricing`,
+      success_url: resolveSafeRedirect(
+        successUrl,
+        baseUrl,
+        "/success?session_id={CHECKOUT_SESSION_ID}"
+      ),
+      cancel_url: resolveSafeRedirect(cancelUrl, baseUrl, "/pricing"),
       metadata: {
         plan,
       },
