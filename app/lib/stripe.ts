@@ -1,12 +1,19 @@
 import Stripe from "stripe";
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error("STRIPE_SECRET_KEY is not set");
-}
+let client: Stripe | null = null;
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2025-02-24.acacia",
-});
+/** Lazily create the Stripe client so builds work without secrets. */
+export function getStripe(): Stripe {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error("STRIPE_SECRET_KEY is not set");
+  }
+  if (!client) {
+    client = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: "2025-02-24.acacia",
+    });
+  }
+  return client;
+}
 
 export const PRICE_IDS = {
   starter: process.env.STRIPE_PRICE_STARTER || "price_starter",
