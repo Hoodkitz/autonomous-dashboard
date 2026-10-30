@@ -170,3 +170,5 @@ export async function POST(req: NextRequest) {
 
   return Response.json({ error: "Unknown action. Use: search, install" }, { status: 400 });
 }
+
+export const runtime = 'nodejs';

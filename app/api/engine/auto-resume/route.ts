@@ -101,3 +101,5 @@ export async function GET() {
     return Response.json({ error: err instanceof Error ? err.message : String(err) });
   }
 }
+
+export const runtime = 'nodejs';

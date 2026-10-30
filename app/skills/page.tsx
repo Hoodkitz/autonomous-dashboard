@@ -171,3 +171,5 @@ export default function SkillsPage() {
     </div>
   );
 }
+
+export const runtime = 'nodejs';
